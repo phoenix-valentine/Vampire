@@ -22,33 +22,25 @@
    possibly in 3 variations, and hand it to the owner to judge whether it is fun. Work stops there
    until they answer.
 
-## PAUSED on 2026-11-26 at 19:33 UTC, at the owner's request
+## Usage rule from the owner (2026-11-26, third message)
 
-The owner asked for a pause at about 90% of usage. The five-hour usage window stood at 89%, so all
-six background workflows were stopped. Do not restart them until the owner says go. The five-hour
-window resets at 23:20 UTC on 2026-11-26.
+Continue, but pause when the five-hour usage window reaches 80%. Check usage between batches
+(session events of kind rate_limit_event). Run small batches. When usage is at about 70%, start no
+new batch of agents; finish what is cheap, save the state, and stop.
 
-What the stopped workflows finished (files are in the repository):
-- Owner's documents, notes in `docs/research/sources/`: ai-game-dev-guide-1 and -2,
-  general-ai-workflow-lessons, less-but-better, mobile-games-101, mutation-gdd-1 and -2,
-  small-game-success-recipes, step-0-guide, trend-remix-guide, what-makes-games-great.
-  Some of these had not yet had their second-reader check.
-- Research in `docs/research/`: genre-guide, core-loop-and-feel.
-- Teardowns in `docs/research/teardowns/`: vampire-survivors, brotato, holocure, 20-minutes-till-dawn.
+## Resumed 2026-11-26 23:42 UTC (new usage window)
 
-Still to do when work resumes:
-- Owner's documents not yet read into notes: mutation-gdd-3 (pages 51 to 75, the lessons: the most
-  important one), game-dev-toolkit, small-games-roadmap, twisting-the-classics,
-  success-recipes-research-upgrade, solo-dev-guide-profit-ai. Game Blueprint and Game Building
-  Blocks were read by the lead directly but have no notes file yet.
-- Research not yet written: theme-bible, iphone-web-pitfalls, predator-games, phone-portrait-ux.
-- Teardowns not yet written: halls-of-torment, magic-survival, archero, megabonk,
-  deep-rock-galactic-survivor, survivor-io.
-- The workflow scripts are saved in `tools/workflows/`. Relaunch each with only the missing items
-  in its arguments. The PDFs live only in the session's upload folder; if that folder is gone, ask
-  the owner to attach the missing documents again.
-- To spend less: run fewer agents at once, skip the second-reader check except for mutation-gdd-3,
-  and keep the lead's own reading to short digests.
+Lean plan, chosen to reach the owner's first stop on a limited budget:
+- Five digest agents write short briefs to `docs/research/digests/` (the long notes are not read by the lead).
+  They also read the three PDFs that matter most and had no notes: Mutation pages 51 to 75 (the
+  lessons), Game Dev Toolkit, Small Games Roadmap, Twisting the Classics.
+- Deferred until after the owner's test of the prototype: notes for solo-dev-guide-profit-ai and
+  success-recipes-research-upgrade (market topics); research files theme-bible, iphone-web-pitfalls,
+  predator-games, phone-portrait-ux; teardowns of halls-of-torment, magic-survival, archero,
+  megabonk, deep-rock-galactic-survivor, survivor-io. The workflow scripts are in `tools/workflows/`.
+- The lead writes `docs/DESIGN.md` and `docs/ARCHITECTURE.md` itself; builder agents with small
+  contexts write the code against them; the lead checks results by running the checks and looking
+  at screenshots.
 
 ## Next action (work in progress, 2026-11-26)
 
