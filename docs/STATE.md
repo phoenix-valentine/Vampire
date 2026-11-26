@@ -22,6 +22,34 @@
    possibly in 3 variations, and hand it to the owner to judge whether it is fun. Work stops there
    until they answer.
 
+## PAUSED on 2026-11-26 at 19:33 UTC, at the owner's request
+
+The owner asked for a pause at about 90% of usage. The five-hour usage window stood at 89%, so all
+six background workflows were stopped. Do not restart them until the owner says go. The five-hour
+window resets at 23:20 UTC on 2026-11-26.
+
+What the stopped workflows finished (files are in the repository):
+- Owner's documents, notes in `docs/research/sources/`: ai-game-dev-guide-1 and -2,
+  general-ai-workflow-lessons, less-but-better, mobile-games-101, mutation-gdd-1 and -2,
+  small-game-success-recipes, step-0-guide, trend-remix-guide, what-makes-games-great.
+  Some of these had not yet had their second-reader check.
+- Research in `docs/research/`: genre-guide, core-loop-and-feel.
+- Teardowns in `docs/research/teardowns/`: vampire-survivors, brotato, holocure, 20-minutes-till-dawn.
+
+Still to do when work resumes:
+- Owner's documents not yet read into notes: mutation-gdd-3 (pages 51 to 75, the lessons: the most
+  important one), game-dev-toolkit, small-games-roadmap, twisting-the-classics,
+  success-recipes-research-upgrade, solo-dev-guide-profit-ai. Game Blueprint and Game Building
+  Blocks were read by the lead directly but have no notes file yet.
+- Research not yet written: theme-bible, iphone-web-pitfalls, predator-games, phone-portrait-ux.
+- Teardowns not yet written: halls-of-torment, magic-survival, archero, megabonk,
+  deep-rock-galactic-survivor, survivor-io.
+- The workflow scripts are saved in `tools/workflows/`. Relaunch each with only the missing items
+  in its arguments. The PDFs live only in the session's upload folder; if that folder is gone, ask
+  the owner to attach the missing documents again.
+- To spend less: run fewer agents at once, skip the second-reader check except for mutation-gdd-3,
+  and keep the lead's own reading to short digests.
+
 ## Next action (work in progress, 2026-11-26)
 
 Working toward the owner's first stop: a polished plain-shapes core loop, in up to 3 variations.
@@ -59,10 +87,7 @@ Facts learned so far that the build must respect:
 
 | Question | Default in use |
 |---|---|
-| Can you send the Mutation design document (with its Part 2 lessons) and the Game Blueprint? Version 2 leans on both and neither was attached | The reconstruction of the 16 blocks and gates in `ROADMAP.md`; "not Mutation" is enforced only as the five differences |
-| How do you want to open playable builds? | A private page published at each milestone, plus the single HTML file in `dist/` |
-| Public name of the game | A working title chosen in step 0.1; three options offered at step 4.5 |
-| Tone of the violence | Stylised and non-realistic, readable shapes over gore |
+| When to resume after the pause, and how much usage to spend per session | Stay paused until told to go |
 
 ## Open problems
 

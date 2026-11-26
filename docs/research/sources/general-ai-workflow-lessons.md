@@ -121,25 +121,12 @@ The document assumes a human briefs, checks and rolls back. With no owner in the
 
 ## Warnings and anti-patterns
 
-- Raising the reasoning level to make up for a vague brief. The spec saves more [p. 1].
-- No rules file, so the same mistakes repeat in every session [p. 1].
-- Retrying a third and fourth time on a broken state instead of rolling back and cutting the task smaller [p. 1].
-- Running everything at maximum effort. Each tier roughly doubles cost; max is for one hard correctness problem [p. 1].
-- Asking for high-effort work without permission to run checks; the effort is wasted [p. 1].
-- Prompting for a five-minute edit [p. 1].
-- Uncommitted working states, so a mistake cannot be undone in one command [p. 1].
-- An owner who cannot read what the AI produced and so cannot catch errors [p. 1].
-- Using free-tier AI outputs in a commercial product and assuming a later upgrade covers them [p. 1].
-- Assuming purely AI-generated work is owned [p. 1].
-- Letting token costs exceed what the product can earn [p. 1].
-- Hiding AI use; discovery costs more trust than disclosure [p. 2].
-- Believing that building the thing is the advantage, when supply has multiplied [p. 2].
-- Investing weeks before any demand test; treating interest as proof of value [p. 2].
-- Paid ads at small scale [p. 2].
-- Visible AI content in a crowded market [p. 2].
-- Depending on one platform's built-in audience with no direct channel [p. 2].
-- Testing without kill criteria, so sunk cost decides [p. 2].
-- Paying or shipping on prices, terms or model names that were not rechecked [p. 2].
+The document states its lessons as things to do. The matching things to avoid:
+
+- Working with agents [p. 1]: a higher reasoning level in place of a clear brief; no rules file; a third retry on a broken state instead of a rollback and a smaller task; maximum effort as the standing setting; high-effort work without permission to run checks; prompting for a five-minute edit; working states left uncommitted; an owner who cannot read what the AI produced.
+- Money and rights [p. 1-2]: free-tier outputs in a commercial product on the assumption that a later upgrade covers them; assuming purely AI-generated work is owned; token costs above what the product earns; hidden AI use.
+- Distribution [p. 2]: treating production as the advantage; weeks of work before any demand test; taking interest as proof of value; paid ads at small scale; visible AI content in a crowded market; one platform's audience with no direct channel.
+- Habits [p. 2]: testing with no kill criteria set beforehand; paying or shipping on prices, terms or model names that were not rechecked.
 
 ## Prompts and templates in the document
 

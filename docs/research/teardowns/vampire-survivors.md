@@ -4,8 +4,9 @@
 en.wikipedia.org, apps.apple.com and play.google.com are outside this session's network allowlist),
 and the shared search budget ran out after about 35 queries. Every sourced fact below therefore comes
 from a search-result summary of the cited page, not from a full read. `[n]` points to the source
-list. **(M)** means "from memory, unverified". "Not found" means searched for and not found. The game
-was not played in this session.
+list. **(M)** means "from memory, unverified". "Not found" means searched for and not found.
+Quotations are as the search summaries gave them and may not be word-exact. The game was not played
+in this session.
 
 ## Worksheet
 
@@ -33,7 +34,7 @@ was not played in this session.
 **What players complain about**
 
 1. Runs drag once the build is overpowered (PC Gamer: that is when it "dragged") [15]. Block 6.
-2. A slow, weak opening: "a long slow burn" (Hardcore Gamer) [15]. Block 6.
+2. "A slow, rough opening and difficulty curve" (a TV Tropes user review; Hardcore Gamer praises the same thing as "a long slow burn") [15][16]. Block 6.
 3. Late-run clutter: effects bury the player and the enemies (player reviews, exact page not confirmed; also (M)) [16]. Block 9.
 4. On phones, aimed weapons point where the thumb steers; touch "not the most responsive"; lag with many sprites (App Store review, Pocket Gamer) [3][13]. Blocks 2, 16.
 5. On phones, the run is lost if the system closes the app (148Apps, App Store reviews) [3][13]. Block 15.
@@ -47,7 +48,7 @@ was not played in this session.
 | 3 | Feedback and feel | Hit flash, knockback, damage numbers, pickup chime (M). The chest is a full-screen show with music and a 1, 3 or 5 item roll [9][17]. No hit-stop (M). | 4. Best reward moments in the genre; single hits are thin. | **Take** one staged jackpot (ours: the feed on a marked victim). **Avoid** numbers as the only impact. |
 | 4 | Rules and systems | Player, enemies, gems, pickups, breakable light sources, chests. Enemies walk at the player and hurt by touch. No score. Win: reach the limit. Lose: health 0. Resources: health, XP, gold. Authored spawns, random offers [5][6]. | 5. Tiny rule set, huge build space. | **Take** authored threat with random offers. **Avoid** a second currency; blood is ours. |
 | 5 | Content | Stage 1: bats, zombies, skeletons, mummies, werewolves, plants, ghosts; a new mix each minute; bosses at 1, 5, 8, 10, 15, 20, 25; events (bat swarm from 2:00, encircling flower wall at 5, 10, 15) [5]. Enemies differ mostly in health and speed. | 4. Huge breadth, thin behaviour. | **Take** the per-minute table with named events. **Avoid** stat-only variety: few humans, different behaviour (flee, raise alarm, hunt). |
-| 6 | Difficulty and pacing | Minute 0: 15 one-hit bats, one spawn a second. Minute 1: 30. Minute 2: 50 at twice the rate. Minute 29: 300 [5]. Bosses scale with player level [6]. Spikes (swarm, wall, boss), relief (chest, screen-clear), then an unbeatable Reaper at 30:00 [17]. Damage is by touch, so failure is visible, though its cause is often an old build choice. | 4. Best arc in the genre; sags when overpowered, opens slowly. | **Take** the authored ramp, timed events and hard end: dawn is our Reaper. **Avoid** 30 minutes and the plateau. |
+| 6 | Difficulty and pacing | The game keeps a minimum number of enemies alive: 15 one-hit bats in minute 0, 30 in minute 1, 50 in minute 2 with spawns twice as often, 300 in minute 29 [5]. Bosses scale with player level [6]. Spikes (swarm, wall, boss), relief (chest, screen-clear), then an unbeatable Reaper at 30:00 [17]. Damage is by touch, so failure is visible, though its cause is often an old build choice. | 4. Best arc in the genre; sags when overpowered, opens slowly. | **Take** the authored ramp, timed events and hard end: dawn is our Reaper. **Avoid** 30 minutes and the plateau. |
 | 7 | Progression and rewards | 6 weapons, 6 passives, weapons to level 8; a weapon plus its matching passive transforms in a boss chest after 10:00; up to 3 Arcana cards a run [17][18]. 3 offers, sometimes 4 [4]. Reroll, skip, banish bought between runs, up to 10 each [7]. Gold buys permanent stats; achievements unlock characters and stages. | 4. Superb discovery and drip; pairings are hidden, and choices turn obvious once known. | **Take** the pair rule, printed on the card. **Avoid** permanent stats that make early runs weak on purpose. Our word stays "power". |
 | 8 | Session structure | Title, character, stage, play: several presses (M). 30 minutes; "Hurry" halves it [17]. Results table of damage per weapon (M). Stops only at death or the limit. Return reason: the unlock list. | 3 on a phone: too long, no early exit. | **Take** the results table and unlock list. **Avoid** the long run and menu chain. |
 | 9 | Readability and interface | Player fixed at centre, health bar under the feet; XP bar on top; timer, level, kills, gold, item icons (M). Gems are the brightest things early; late, effects cover everything [16]. | 3. Clear at minute 10, a blur at 25. | **Take** centred player, health bar at the avatar. **Avoid** opaque full-screen effects. |
@@ -72,7 +73,7 @@ was not played in this session.
 | First level-up | Not found. Needs 5 XP; about 10 to 20 s (M) | [4] |
 | XP per level | 5, then +10 a level to 20, +13 to 40, +16 after; extra 600 at 20 and 2,400 at 40; 1,805 total to level 20 | [4] |
 | Level-ups in a run | Not found. One player: level 54 at 30:00; 50 to 80 typical (M) | [16] |
-| Choices | 3, sometimes 4 (Luck (M)). Reroll, skip, banish: none at first, later 2 per rank, 5 ranks | [4][7] |
+| Choices | 3, sometimes 4 (Luck (M)). Reroll, skip, banish: none at first (M), later 2 per rank, 5 ranks, so up to 10 each | [4][7] |
 | Slots | 6 weapons, 6 passives; then offers are gold or food | [18] |
 | Content at early access | 7 characters, 22 weapons, 12 upgrades, 1 stage, 23 achievements | [11] |
 | Content at 1.0 (plan) | 24 characters, 48 weapons and transformations, 5 normal and 5 special stages | [11] |
@@ -80,7 +81,7 @@ was not played in this session.
 | Enemies alive | Spawning stops at 300 (one wiki page says 500) | [6] |
 | Speeds | Player base "100%"; zombie and skeleton 100, bats 140, in wiki units. Pixels per second and the ratio: not found | [8] |
 | Health | Bat 1 or 5; zombie 10; skeleton 15; player 100 (Antonio 120) | [8] |
-| Scaling | An authored table, not a formula: minimum alive 15, 30, 50 ... 300; spawn interval 1.0 s down to 0.1. Bosses multiply health by player level. Curse multiplies enemy health, speed, number and rate | [5][6] |
+| Scaling | An authored table, not a formula: minimum alive 15, 30, 50 ... 300; spawn interval 1.0 s, 0.5, 0.25, down to 0.1 at 20:00. Bosses multiply health by player level. Curse multiplies enemy health, speed, number and rate | [5][6] |
 | Chest odds (one boss) | 3% five items, 10% three, else one; scaled by Luck | [17] |
 
 ## The first minute
@@ -89,7 +90,7 @@ Reconstructed from the numbers above and memory; not timed.
 
 - **Before 0:00.** Title, start, the one character, the one stage: a few presses, nothing to read (M).
 - **0:00.** The character stands at the centre of an open field. No prompt. The whip cracks sideways by itself every 1.35 s.
-- **0:02 to 0:05.** Bats walk in from the edges, one a second, up to 15 alive. The player moves; a bat meets the whip, dies in one hit, drops a blue gem.
+- **0:02 to 0:05.** Bats walk in from the edges; the game keeps at least 15 alive. The player moves; a bat meets the whip, dies in one hit, drops a blue gem.
 - **0:05 to 0:15.** The player walks over gems and the top bar fills: the reward must be fetched.
 - **About 0:10 to 0:20 (M).** First level-up: pause, three cards. Next levels cost 15 and 25 XP, so two or three more arrive before 1:00 (M).
 - **0:20 to 1:00.** Circling; a brazier breaks into a coin or food (M). Almost no danger.
@@ -136,7 +137,7 @@ Reconstructed from the numbers above and memory; not timed.
 13. TouchArcade (2022-12-09): https://toucharcade.com/2022/12/09/vampire-survivors-mobile-review-controller-cloud-save-sync-dlc-unlock-iphone-ipad-pro/ ; Pocket Gamer (date not found): https://www.pocketgamer.com/vampire-survivors/review ; 148Apps (date not found): https://148apps.com/reviews/vampire-survivors-review
 14. PC Gamer, BAFTA win (2023-03): https://pcgamer.com/vampire-survivors-beats-out-elden-ring-and-god-of-war-to-score-best-game-win-at-baftas
 15. PC Gamer review (2022): https://pcgamer.com/vampire-survivors-review ; Game Informer: https://www.gameinformer.com/review/vampire-survivors/single-stick-masterpiece ; Hardcore Gamer: https://hardcoregamer.com/reviews/review-vampire-survivors/428995/
-16. Player posts (dates not found): https://www.backloggd.com/reviews/everyone/year/liked:asc/vampire-survivors/ ; https://steamcommunity.com/app/1794680/discussions/0/3201493834358639726
+16. Player posts (dates not found): https://www.backloggd.com/reviews/everyone/year/liked:asc/vampire-survivors/ ; https://steamcommunity.com/app/1794680/discussions/0/3201493834358639726 ; https://tvtropes.org/pmwiki/review_comments.php?id=22046
 17. Wiki, Treasure Chest, The Reaper, Stages, Arcanas: https://vampire.survivors.wiki/w/Treasure_Chest ; https://vampire.survivors.wiki/w/The_Reaper ; https://vampire.survivors.wiki/w/Stages ; https://vampire.survivors.wiki/w/Arcanas
 18. Wikiwand mirror of the Wikipedia article: https://www.wikiwand.com/en/articles/Vampire_Survivors
 19. Rogue Ranker fan guide (undated): https://rogueranker.com/vampire-survivors-ode-to-castlevania/

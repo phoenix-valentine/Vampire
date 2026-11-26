@@ -1,6 +1,6 @@
 # Mutation: Become the Monster. Game Design Document and Lessons v1.3 (pages 1 to 25)
 
-Reader notes. Source: the PDF, pages 1 to 25 of 75, read as page images and cross-checked against the PDF text layer. All 25 pages were readable. "inference" marks my own reading or arithmetic, not the document. This file runs longer than 3000 words on purpose: the content tables (every organ, unit and formula) are kept whole because the lead will not read the PDF.
+Reader notes. Source: the PDF, pages 1 to 25 of 75, read as page images and cross-checked against the PDF text layer. All 25 pages were readable. "inference" marks my own reading or arithmetic, not the document. Size: about 10,000 words, not the 3000 asked for, on purpose: these 25 pages are almost all data tables (the source text is about 7,400 words), and every organ, unit and formula is kept whole because the lead will not read the PDF. Short path if context is tight: read "Numbers and thresholds", "What it means for Vampire: No Survivors", "Warnings and anti-patterns" and "Things the lead should decide or check" (about 3,000 words together) and use "Frameworks, lists and checklists" as a look-up sheet by section number.
 
 ## What it is
 
