@@ -1,13 +1,60 @@
 # State
 
-**Stopped at the owner's first stop, 2026-11-27.** Prototype v0.1.0 is built, checked and published.
-Do not continue building until the owner has played it and answered.
+**Paused for usage on 2026-11-27 at about 01:35 UTC; resumes after the window resets at 04:40 UTC.**
+The owner has given the verdict on v0.1.0 and asked for more. The plan below is decided; build it.
 
 - Playable page (private to the owner): https://claude.ai/artifact/WzD5dZGqBfymbxQTQ31huZ
   To update it, run `node tools/build.mjs` and publish `dist/vampire-embed.html` to that same address.
-- The same game as one file to open directly: `dist/vampire.html`.
-- Design: `docs/DESIGN.md` (v0.1, not locked). Numbers: `src/core/settings.js`. History: `CHANGELOG.md`.
-- Checks: `node tools/check.mjs` (61 pass). Bots and balance table: `node tools/lab.mjs 20 --save`, result in `reports/lab-latest.md`.
+- Design: `docs/DESIGN.md` (v0.1). Numbers: `src/core/settings.js`. History: `CHANGELOG.md`.
+- Checks: `node tools/check.mjs` (61 pass). Lab: `node tools/lab.mjs 20 --save`.
+
+## The owner's verdict (2026-11-27)
+
+"Slaughter is definitely proven and works the best. But feels very basic, can you continue on your
+research and development and show me what you can do?"
+
+Reading: keep Slaughter as the core, cut Feed and Hunt, and make the game deep and good-looking.
+
+## Next: v0.2, the slice. Build in this order, commit after each step, publish once step 4 works
+
+1. **Cut Feed and Hunt whole** in one change: modes, hunger, blood pools, prey, fleeing, escapes and
+   alarm, their bot branches, texts and checks. Keep the walled square and the gates.
+2. **Depth, in the simulation**
+   - Frenzy (the one twist): each kill fills a ring around the vampire (tough humans count 3); it drains
+     after 2.5 s without a kill. Full: 6 s of frenzy, with 25% more speed, claws 40% faster and all
+     round, blood flying in from three times as far. Kills extend it, up to 4 s more.
+   - Build: claws are innate with levels II and III. Three attack slots chosen from five: Bat Swarm,
+     Blood Lance, Blood Nova, Mist Trail (new: a damaging, slowing trail behind you), Grave Spikes (new:
+     spikes under random nearby humans). Three gift slots chosen from six: Bloodlust (faster claws),
+     Swift, Thick Blood, Hypnotic Gaze, Mist Form, Thirst (new: blood from further, heals more).
+   - Evolutions: an attack at level 3 plus its paired gift offers a gold card. Claws + Bloodlust =
+     Reaper's Scythe. Bats + Swift = Night Wings. Lance + Thirst = Crimson Rain. Nova + Thick Blood =
+     Night Terror. Mist Trail + Mist Form = Grave Fog. Spikes + Gaze = Impaler. Every card names its
+     pair. Two rerolls a night.
+   - Humans: add the Hound (faster than the vampire, weak, in packs from 1:15) and the Torchbearer
+     (throws fire that burns a patch of ground, with a 0.7 s warning circle). Elite Witch Hunter at
+     1:05 and 2:05 (a fan of three bolts; drops a chest that opens a card screen with a guaranteed
+     evolution or a double upgrade).
+   - Boss: the Inquisitor arrives at 2:30; the night now ends at 3:30. One idea: his lantern throws a
+     turning cone of holy light that burns, so stay out of the light. He also calls holy circles
+     (1.1 s warning) and rallies the mob. At half health: a second cone and a faster turn. Killing him
+     ends the night in triumph; lasting until dawn is the lesser win.
+   - Retune with the lab. Keep every fairness number.
+3. **Art, all drawn in code, no image files:** a caped vampire, human figures with their weapons, the
+   hound, the witch hunter, the Inquisitor with his lantern, a cobbled square, stone walls, gate
+   lanterns and lamp posts with warm light, roofs beyond the walls, blood drops and pools, claw
+   crescents, bats, lances, mist, spikes, fire, holy light. A title with a moon and the town's skyline.
+4. **Screens:** cards with icons, level pips, the pairing line and a reroll button; a boss bar; edge
+   arrows to the elite and the chest; best-night records saved.
+5. **Sound:** music made in code (a drone, sparse minor notes, layers by stage, a boss theme) with its
+   own switch; sounds for every new event.
+6. **Research, written by the lead from knowledge** (pages cannot be read from here, and agents are
+   costly): `docs/research/theme-bible.md` and `docs/research/depth-systems.md`, marked unverified.
+7. Checks, screenshots, one small independent review, publish to the same address, then bring
+   `docs/DESIGN.md` to v1 (locked) with the new budget table and update `CHANGELOG.md`.
+
+Keep the method that worked: the lead writes whole files in large steps, few tool calls, checks after
+each group. Mutation's first lesson applies: this list is the budget; nothing beyond it in v0.2.
 
 ## Standing instructions from the owner
 
@@ -17,28 +64,6 @@ Do not continue building until the owner has played it and answered.
 4. **Usage:** pause when the five-hour usage window reaches 80%. Check between batches (session events
    of kind rate_limit_event). At about 70% start no new agents. Agents are expensive here: five reading
    agents cost about a quarter of a window. Prefer the lead writing in large steps; keep reviews small.
-
-## What the owner was asked (the test card)
-
-Play each variation two or three times on the phone, upright, with sound on (ring switch off silent).
-1. Which variation, if any, made you start another night without thinking about it?
-2. After dying, could you say what killed you and what you would do differently?
-3. In your own words, what does each variation ask you to do?
-4. Anything that felt wrong: movement, the hit, the blood, the cards, the sound, the difficulty.
-5. Optional: tap "Copy a report of this night" on the end screen and paste it, or send a screenshot
-   with the small technical line showing (tap the version number).
-
-Pass bar and kill criteria are in `docs/DESIGN.md` section 6. Blueprint step 7 allows up to three
-rounds of changes before the core itself must change.
-
-## When the owner answers
-
-- **One variation is fun:** keep it (or the best parts of two), delete the others in the same change,
-  lock `docs/DESIGN.md` as v1, then follow `docs/ROADMAP.md` from step 2.1 with the block table there.
-- **Almost:** list the three biggest problems, change only what the owner picks or what the notes
-  clearly point to, publish again, ask again. At most three rounds.
-- **Not fun:** go back to the synthesis and pick a different twist; prototype again with plain shapes.
-- Turn every note into a numbered list and answer each item in `CHANGELOG.md`.
 
 ## Known limits of v0.1.0 (also told to the owner)
 
@@ -68,5 +93,4 @@ rounds of changes before the core itself must change.
 
 | Question | Default in use |
 |---|---|
-| The verdict on the three variations | Work is stopped until it arrives |
 | Should sound ignore the phone's ring switch? | No: it follows the switch, and the title screen says so |
