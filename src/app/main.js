@@ -67,6 +67,7 @@ function boot() {
   let readyT = 0;
   let endT = 0;
   const perf = { frames: 0, sumMs: 0, worstMs: 0, peakHumans: 0 };
+  let wakeLock = null;
   const errors = [];
   window.addEventListener("error", (e) => errors.push(String(e.message)));
 
@@ -101,6 +102,7 @@ function boot() {
         loop.setPaused(false);
         state = null;
         phase = "title";
+        letScreenSleep();
         renderer.reset();
         ui.showTitle();
       },
@@ -137,8 +139,23 @@ function boot() {
     perf.peakHumans = 0;
     loop.setPaused(false);
     input.setEnabled(true);
-    if (navigator.wakeLock && navigator.wakeLock.request) {
-      navigator.wakeLock.request("screen").catch(() => {});
+    if (!wakeLock && navigator.wakeLock && navigator.wakeLock.request) {
+      navigator.wakeLock
+        .request("screen")
+        .then((lock) => {
+          wakeLock = lock;
+          lock.addEventListener("release", () => {
+            wakeLock = null;
+          });
+        })
+        .catch(() => {});
+    }
+  }
+
+  function letScreenSleep() {
+    if (wakeLock) {
+      wakeLock.release().catch(() => {});
+      wakeLock = null;
     }
   }
 
@@ -154,6 +171,12 @@ function boot() {
     } else {
       ui.hidePause();
       audio.resume();
+      // The night waits for the thumb again, so nothing lands while it is still off the glass.
+      if (phase === "play") {
+        phase = "ready";
+        readyT = 0;
+        ui.showHint("Touch and drag to go on.", 4);
+      }
     }
   }
 
@@ -193,6 +216,7 @@ function boot() {
 
   function showEnd() {
     phase = "end";
+    letScreenSleep();
     input.setEnabled(false);
     ui.showEnd({
       result: state.result,
@@ -256,7 +280,7 @@ function boot() {
   let debugIn = 0;
   let slowFor = 0;
   function watchSpeed(elapsed) {
-    if (loop.stats.avgMs > 22) {
+    if (loop.stats.workMs > 11) {
       slowFor += elapsed;
     } else {
       slowFor = 0;
@@ -269,11 +293,13 @@ function boot() {
 
   function draw(alpha, elapsed) {
     const still = phase === "levelup" || paused || phase === "end";
+    if (phase === "play" && !paused && state.t > 1) {
+      watchSpeed(elapsed);
+    }
     renderer.draw(state, phase, still ? 1 : alpha, elapsed, input.state);
     ui.update(state);
     audio.update(state, elapsed, phase === "play" && !paused);
     if (phase === "play" && !paused && state.t > 1) {
-      watchSpeed(elapsed);
       perf.frames++;
       perf.sumMs += loop.stats.frameMs;
       if (loop.stats.frameMs > perf.worstMs) {
@@ -311,8 +337,9 @@ function boot() {
       setPaused(!paused);
     }
   });
-  // Any first touch anywhere is allowed to start the sound.
-  window.addEventListener("pointerdown", () => audio.unlock(), { once: true });
+  // Every touch is allowed to wake the sound again: phones put it to sleep whenever the page is hidden.
+  window.addEventListener("pointerup", () => audio.unlock(), true);
+  window.addEventListener("keydown", () => audio.unlock(), true);
 
   ui.showTitle();
   loop.start();

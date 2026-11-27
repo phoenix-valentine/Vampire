@@ -18,6 +18,7 @@ export function createLoop(options) {
     avgMs: 16.7,
     stepsThisFrame: 0,
     dropped: 0,
+    workMs: 4, // how long the game itself spends on a frame, whatever the screen's rhythm
   };
 
   function frame(now) {
@@ -40,6 +41,7 @@ export function createLoop(options) {
       stats.worstMs = frameMs;
     }
     let steps = 0;
+    const workStart = performance.now();
     if (!paused) {
       if (freezeLeft > 0) {
         freezeLeft -= elapsed;
@@ -62,6 +64,7 @@ export function createLoop(options) {
     stats.stepsThisFrame = steps;
     const alpha = paused ? 1 : Math.min(1, accumulator / stepSeconds);
     options.draw(alpha, elapsed, paused);
+    stats.workMs += (performance.now() - workStart - stats.workMs) * 0.05;
   }
 
   return {

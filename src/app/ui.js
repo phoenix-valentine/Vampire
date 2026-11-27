@@ -78,6 +78,18 @@ export function createUi(app, handlers, version) {
   let pulseUntil = 0;
 
   // ---- Screens ----
+  let openedAt = 0;
+  overlay.addEventListener(
+    "click",
+    (e) => {
+      if (performance.now() - openedAt < S.feel.cardLock * 1000) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    },
+    true,
+  );
+
   function screenNode(name) {
     const node = el("div", "screen screen-" + name);
     node.hidden = true;
@@ -113,13 +125,13 @@ export function createUi(app, handlers, version) {
     const head = el("div", "title-head");
     head.appendChild(el("h1", "", "Vampire"));
     head.appendChild(el("p", "sub", "No Survivors"));
-    head.appendChild(el("p", "lead", "One night. One thumb. Three ways to feed. Play each and see which one you want again."));
+    head.appendChild(el("p", "lead", "One night, one thumb. Drag anywhere to move; your claws strike on their own. Three ways to feed: play each and see which you want again."));
     const list = el("div", "stack");
     for (let i = 0; i < MODES.length; i++) {
       list.appendChild(modeButton(MODES[i], true));
     }
     const foot = el("div", "foot");
-    foot.appendChild(el("span", "", "Plain shapes on purpose: this build tests the feel."));
+    foot.appendChild(el("span", "", "Plain shapes on purpose. Sound follows the phone's ring switch."));
     foot.appendChild(versionLabel());
     title.appendChild(head);
     title.appendChild(list);
@@ -140,6 +152,7 @@ export function createUi(app, handlers, version) {
     cardsTitle.textContent = "LEVEL " + level;
     cardsList.textContent = "";
     cardsOpenAt = performance.now();
+    openedAt = cardsOpenAt;
     hint.classList.remove("on");
     hintUntil = 0;
     cardsList.classList.add("locked");
@@ -269,6 +282,7 @@ export function createUi(app, handlers, version) {
     });
     endButtons.appendChild(copy);
     reportBox.hidden = true;
+    openedAt = performance.now();
     top.hidden = true;
     banner.classList.remove("on");
     hint.classList.remove("on");
@@ -360,9 +374,11 @@ export function createUi(app, handlers, version) {
       top.hidden = true;
       banner.classList.remove("on");
       hint.classList.remove("on");
+      openedAt = performance.now();
       title.hidden = false;
     },
     showPause() {
+      openedAt = performance.now();
       pause.hidden = false;
     },
     hidePause() {

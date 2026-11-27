@@ -10,13 +10,14 @@ const C = {
   groundLine: "#1d1b27",
   wall: "#34303f",
   stain: "#420a12",
-  corpse: "#4b4539",
-  corpseSteel: "#3a4049",
-  corpseOlive: "#3f4636",
+  corpse: "#322d27", // the dead are dark, so the living always stand out against them
+  corpseSteel: "#2b2f36",
+  corpseOlive: "#2c3027",
   drop: "#ff2b3c",
   pool: "#e01426",
-  peasant: "#b8a98f",
-  prey: "#ddd2bd",
+  peasant: "#b08a5a",
+  prey: "#c8bfae",
+  weapon: "#d5d9de",
   watchman: "#7c8896",
   archer: "#93a27e",
   outline: "#0b0a10",
@@ -319,9 +320,10 @@ export function createRenderer(canvas, screen) {
         ctx.stroke();
       } else if (h.ai === "aim") {
         const def = S.humans.archer;
-        const len = def.shotSpeed * def.shotLife;
-        ctx.lineWidth = h.locked ? 2.5 : 1.5;
-        ctx.globalAlpha = h.locked ? 0.95 : 0.5;
+        // The line runs from the archer to just past the vampire, so it reads as "that one is aiming at me".
+        const len = Math.min(def.shotSpeed * def.shotLife, Math.hypot(p.x - h.x, p.y - h.y) + 70);
+        ctx.lineWidth = h.locked ? 3 : 2;
+        ctx.globalAlpha = h.locked ? 1 : 0.75;
         ctx.setLineDash(h.locked ? [] : [8, 7]);
         ctx.beginPath();
         ctx.moveTo(h.x, h.y);
@@ -405,6 +407,25 @@ export function createRenderer(canvas, screen) {
       ctx.closePath();
     }
     ctx.fill();
+    ctx.stroke();
+    // Those who come to fight carry a weapon, held toward the vampire. Prey carry nothing.
+    ctx.strokeStyle = C.weapon;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < humans.length; i++) {
+      const h = humans[i];
+      if (h.role !== "rush" || h.dead || h.gone) {
+        continue;
+      }
+      const x = h.px + (h.x - h.px) * alpha;
+      const y = h.py + (h.y - h.py) * alpha;
+      const dx = p.x - x;
+      const dy = p.y - y;
+      const d = Math.hypot(dx, dy) || 1;
+      const reach = h.ai === "windup" ? 13 : 8;
+      ctx.moveTo(x + (dx / d) * h.r * 0.5, y + (dy / d) * h.r * 0.5);
+      ctx.lineTo(x + (dx / d) * (h.r + reach), y + (dy / d) * (h.r + reach));
+    }
     ctx.stroke();
     // Anyone just hit flashes white. A townsperson who has seen the vampire carries an amber mark.
     ctx.fillStyle = "#ffffff";
@@ -608,14 +629,21 @@ export function createRenderer(canvas, screen) {
       shakeY = (Math.random() * 2 - 1) * amount;
     }
     const scale = sc.scale;
-    const originX = w / 2 - px * scale + shakeX;
-    const originY = h * S.view.playerScreenY - py * scale + shakeY;
+    // The camera follows the vampire but stops at the walls, so the screen is never half empty.
+    const halfW = w / 2 / scale;
+    const upH = (h * S.view.playerScreenY) / scale;
+    const downH = (h * (1 - S.view.playerScreenY)) / scale;
+    const margin = 70;
+    const camX = Math.max(halfW - margin, Math.min(S.arena.w + margin - halfW, px));
+    const camY = Math.max(upH - margin, Math.min(S.arena.h + margin - downH, py));
+    const originX = w / 2 - camX * scale + shakeX;
+    const originY = h * S.view.playerScreenY - camY * scale + shakeY;
     ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * originX, dpr * originY);
     const view = {
-      left: px - w / 2 / scale - 8,
-      right: px + w / 2 / scale + 8,
-      top: py - (h * S.view.playerScreenY) / scale - 8,
-      bottom: py + (h * (1 - S.view.playerScreenY)) / scale + 8,
+      left: camX - halfW - 8,
+      right: camX + halfW + 8,
+      top: camY - upH - 8,
+      bottom: camY + downH + 8,
     };
     drawArena(view, state);
     drawStains();

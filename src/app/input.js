@@ -43,11 +43,19 @@ export function createInput(surface, options) {
   }
 
   function onDown(e) {
-    if (!enabled || pointerId !== null) {
+    if (!enabled) {
       return;
     }
     if (e.pointerType === "mouse" && e.button !== 0) {
       return;
+    }
+    if (pointerId !== null) {
+      // A newer touch takes over the stick, so a resting hand or a second thumb never leaves it dead.
+      try {
+        surface.releasePointerCapture(pointerId);
+      } catch (err) {
+        // Already released.
+      }
     }
     pointerId = e.pointerId;
     try {

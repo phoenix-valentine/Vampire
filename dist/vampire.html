@@ -1541,7 +1541,9 @@ button:focus-visible {
       worstMs: 0,
       avgMs: 16.7,
       stepsThisFrame: 0,
-      dropped: 0
+      dropped: 0,
+      workMs: 4
+      // how long the game itself spends on a frame, whatever the screen's rhythm
     };
     function frame(now) {
       rafId = requestAnimationFrame(frame);
@@ -1549,7 +1551,7 @@ button:focus-visible {
       last = now, elapsed < 0 && (elapsed = 0), elapsed > 0.25 && (elapsed = stepSeconds, stats.dropped++);
       let frameMs = elapsed * 1e3;
       stats.frames++, stats.frameMs = frameMs, stats.avgMs += (frameMs - stats.avgMs) * 0.05, frameMs > stats.worstMs && (stats.worstMs = frameMs);
-      let steps = 0;
+      let steps = 0, workStart = performance.now();
       if (!paused)
         if (freezeLeft > 0)
           freezeLeft -= elapsed;
@@ -1560,7 +1562,7 @@ button:focus-visible {
         }
       stats.stepsThisFrame = steps;
       let alpha = paused ? 1 : Math.min(1, accumulator / stepSeconds);
-      options.draw(alpha, elapsed, paused);
+      options.draw(alpha, elapsed, paused), stats.workMs += (performance.now() - workStart - stats.workMs) * 0.05;
     }
     return {
       stats,
@@ -1623,8 +1625,13 @@ button:focus-visible {
       state.mx = dx / len * amount, state.my = dy / len * amount;
     }
     function onDown(e) {
-      if (!enabled || pointerId !== null || e.pointerType === "mouse" && e.button !== 0)
+      if (!enabled || e.pointerType === "mouse" && e.button !== 0)
         return;
+      if (pointerId !== null)
+        try {
+          surface.releasePointerCapture(pointerId);
+        } catch {
+        }
       pointerId = e.pointerId;
       try {
         surface.setPointerCapture(pointerId);
@@ -1717,7 +1724,14 @@ button:focus-visible {
     pauseButton.setAttribute("aria-label", "Pause"), pauseButton.appendChild(el("span")), pauseButton.appendChild(el("span")), pauseButton.addEventListener("click", () => handlers.onPause()), top.appendChild(bars), top.appendChild(pauseButton);
     let banner = el("div", "banner"), hint = el("div", "hint");
     hud.appendChild(top), hud.appendChild(banner), hud.appendChild(hint), top.hidden = !0;
-    let bannerUntil = 0, hintUntil = 0, shown = { blood: -1, level: -1, levelN: -1, clock: "", escapes: -1, low: !1 }, pulseUntil = 0;
+    let bannerUntil = 0, hintUntil = 0, shown = { blood: -1, level: -1, levelN: -1, clock: "", escapes: -1, low: !1 }, pulseUntil = 0, openedAt = 0;
+    overlay.addEventListener(
+      "click",
+      (e) => {
+        performance.now() - openedAt < SETTINGS.feel.cardLock * 1e3 && (e.stopPropagation(), e.preventDefault());
+      },
+      !0
+    );
     function screenNode(name) {
       let node = el("div", "screen screen-" + name);
       return node.hidden = !0, overlay.appendChild(node), node;
@@ -1735,18 +1749,18 @@ button:focus-visible {
     }
     (function() {
       let head = el("div", "title-head");
-      head.appendChild(el("h1", "", "Vampire")), head.appendChild(el("p", "sub", "No Survivors")), head.appendChild(el("p", "lead", "One night. One thumb. Three ways to feed. Play each and see which one you want again."));
+      head.appendChild(el("h1", "", "Vampire")), head.appendChild(el("p", "sub", "No Survivors")), head.appendChild(el("p", "lead", "One night, one thumb. Drag anywhere to move; your claws strike on their own. Three ways to feed: play each and see which you want again."));
       let list = el("div", "stack");
       for (let i = 0; i < MODES.length; i++)
         list.appendChild(modeButton(MODES[i], !0));
       let foot = el("div", "foot");
-      foot.appendChild(el("span", "", "Plain shapes on purpose: this build tests the feel.")), foot.appendChild(versionLabel()), title.appendChild(head), title.appendChild(list), title.appendChild(foot);
+      foot.appendChild(el("span", "", "Plain shapes on purpose. Sound follows the phone's ring switch.")), foot.appendChild(versionLabel()), title.appendChild(head), title.appendChild(list), title.appendChild(foot);
     })();
     let cardsTitle = el("h2", "", "LEVEL 2"), cardsSub = el("p", "sub", "Choose one"), cardsList = el("div", "stack");
     cards.appendChild(el("div", "spacer")), cards.appendChild(cardsTitle), cards.appendChild(cardsSub), cards.appendChild(cardsList);
     let cardsOpenAt = 0;
     function showCards(offer, level) {
-      cardsTitle.textContent = "LEVEL " + level, cardsList.textContent = "", cardsOpenAt = performance.now(), hint.classList.remove("on"), hintUntil = 0, cardsList.classList.add("locked"), setTimeout(() => cardsList.classList.remove("locked"), SETTINGS.feel.cardLock * 1e3);
+      cardsTitle.textContent = "LEVEL " + level, cardsList.textContent = "", cardsOpenAt = performance.now(), openedAt = cardsOpenAt, hint.classList.remove("on"), hintUntil = 0, cardsList.classList.add("locked"), setTimeout(() => cardsList.classList.remove("locked"), SETTINGS.feel.cardLock * 1e3);
       for (let i = 0; i < offer.length; i++) {
         let card = offer[i], button = el("button", "btn card"), head = el("strong", "", card.name);
         card.level > 1 && head.appendChild(el("em", "", " level " + card.level)), button.appendChild(head), button.appendChild(el("span", "", card.text)), button.addEventListener("click", () => {
@@ -1796,7 +1810,7 @@ button:focus-visible {
           reportBox.hidden = !1, reportBox.focus(), reportBox.select(), copy.textContent = "Select the text below and copy it";
         };
         navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(data.report).then(done, fallback) : fallback();
-      }), endButtons.appendChild(copy), reportBox.hidden = !0, top.hidden = !0, banner.classList.remove("on"), hint.classList.remove("on"), end.hidden = !1;
+      }), endButtons.appendChild(copy), reportBox.hidden = !0, openedAt = performance.now(), top.hidden = !0, banner.classList.remove("on"), hint.classList.remove("on"), end.hidden = !1;
     }
     function hideScreens() {
       title.hidden = !0, cards.hidden = !0, pause.hidden = !0, end.hidden = !0;
@@ -1829,10 +1843,10 @@ button:focus-visible {
       hideScreens,
       setToggles,
       showTitle() {
-        hideScreens(), top.hidden = !0, banner.classList.remove("on"), hint.classList.remove("on"), title.hidden = !1;
+        hideScreens(), top.hidden = !0, banner.classList.remove("on"), hint.classList.remove("on"), openedAt = performance.now(), title.hidden = !1;
       },
       showPause() {
-        pause.hidden = !1;
+        openedAt = performance.now(), pause.hidden = !1;
       },
       hidePause() {
         pause.hidden = !0;
@@ -1862,13 +1876,15 @@ button:focus-visible {
     groundLine: "#1d1b27",
     wall: "#34303f",
     stain: "#420a12",
-    corpse: "#4b4539",
-    corpseSteel: "#3a4049",
-    corpseOlive: "#3f4636",
+    corpse: "#322d27",
+    // the dead are dark, so the living always stand out against them
+    corpseSteel: "#2b2f36",
+    corpseOlive: "#2c3027",
     drop: "#ff2b3c",
     pool: "#e01426",
-    peasant: "#b8a98f",
-    prey: "#ddd2bd",
+    peasant: "#b08a5a",
+    prey: "#c8bfae",
+    weapon: "#d5d9de",
     watchman: "#7c8896",
     archer: "#93a27e",
     outline: "#0b0a10",
@@ -2027,8 +2043,8 @@ button:focus-visible {
             let def = SETTINGS.humans[h.type], full = def.reach + h.r + p.radius + def.strikeSlack, share = Math.max(0, h.aiT / def.windup);
             ctx.lineWidth = 2.5, ctx.globalAlpha = 0.9, ctx.beginPath(), ctx.arc(h.x, h.y, h.r + (full - h.r) * share, 0, TAU), ctx.stroke();
           } else if (h.ai === "aim") {
-            let def = SETTINGS.humans.archer, len = def.shotSpeed * def.shotLife;
-            ctx.lineWidth = h.locked ? 2.5 : 1.5, ctx.globalAlpha = h.locked ? 0.95 : 0.5, ctx.setLineDash(h.locked ? [] : [8, 7]), ctx.beginPath(), ctx.moveTo(h.x, h.y), ctx.lineTo(h.x + h.ax * len, h.y + h.ay * len), ctx.stroke(), ctx.setLineDash([]);
+            let def = SETTINGS.humans.archer, len = Math.min(def.shotSpeed * def.shotLife, Math.hypot(p.x - h.x, p.y - h.y) + 70);
+            ctx.lineWidth = h.locked ? 3 : 2, ctx.globalAlpha = h.locked ? 1 : 0.75, ctx.setLineDash(h.locked ? [] : [8, 7]), ctx.beginPath(), ctx.moveTo(h.x, h.y), ctx.lineTo(h.x + h.ax * len, h.y + h.ay * len), ctx.stroke(), ctx.setLineDash([]);
           }
         }
       }
@@ -2069,7 +2085,15 @@ button:focus-visible {
         let x = h.px + (h.x - h.px) * alpha, y = h.py + (h.y - h.py) * alpha, a = h.ai === "aim" ? Math.atan2(h.ay, h.ax) : Math.atan2(p.y - h.y, p.x - h.x), r = h.r * 1.35;
         ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r), ctx.lineTo(x + Math.cos(a + 2.4) * r, y + Math.sin(a + 2.4) * r), ctx.lineTo(x + Math.cos(a - 2.4) * r, y + Math.sin(a - 2.4) * r), ctx.closePath();
       }
-      ctx.fill(), ctx.stroke(), ctx.fillStyle = "#ffffff", ctx.beginPath();
+      ctx.fill(), ctx.stroke(), ctx.strokeStyle = C.weapon, ctx.lineWidth = 2, ctx.beginPath();
+      for (let i = 0; i < humans.length; i++) {
+        let h = humans[i];
+        if (h.role !== "rush" || h.dead || h.gone)
+          continue;
+        let x = h.px + (h.x - h.px) * alpha, y = h.py + (h.y - h.py) * alpha, dx = p.x - x, dy = p.y - y, d = Math.hypot(dx, dy) || 1, reach = h.ai === "windup" ? 13 : 8;
+        ctx.moveTo(x + dx / d * h.r * 0.5, y + dy / d * h.r * 0.5), ctx.lineTo(x + dx / d * (h.r + reach), y + dy / d * (h.r + reach));
+      }
+      ctx.stroke(), ctx.fillStyle = "#ffffff", ctx.beginPath();
       for (let i = 0; i < humans.length; i++) {
         let h = humans[i];
         h.flash > 0 && !h.dead && !h.gone && (ctx.moveTo(h.x + h.r * 0.85, h.y), ctx.arc(h.x, h.y, h.r * 0.85, 0, TAU));
@@ -2151,13 +2175,13 @@ button:focus-visible {
         let amount = SETTINGS.feel.shakeMax * fx.trauma * fx.trauma;
         shakeX = (Math.random() * 2 - 1) * amount, shakeY = (Math.random() * 2 - 1) * amount;
       }
-      let scale = sc.scale, originX = w / 2 - px * scale + shakeX, originY = h * SETTINGS.view.playerScreenY - py * scale + shakeY;
+      let scale = sc.scale, halfW = w / 2 / scale, upH = h * SETTINGS.view.playerScreenY / scale, downH = h * (1 - SETTINGS.view.playerScreenY) / scale, margin = 70, camX = Math.max(halfW - margin, Math.min(SETTINGS.arena.w + margin - halfW, px)), camY = Math.max(upH - margin, Math.min(SETTINGS.arena.h + margin - downH, py)), originX = w / 2 - camX * scale + shakeX, originY = h * SETTINGS.view.playerScreenY - camY * scale + shakeY;
       ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * originX, dpr * originY);
       let view = {
-        left: px - w / 2 / scale - 8,
-        right: px + w / 2 / scale + 8,
-        top: py - h * SETTINGS.view.playerScreenY / scale - 8,
-        bottom: py + h * (1 - SETTINGS.view.playerScreenY) / scale + 8
+        left: camX - halfW - 8,
+        right: camX + halfW + 8,
+        top: camY - upH - 8,
+        bottom: camY + downH + 8
       };
       drawArena(view, state), drawStains(), drawCorpses(state), drawDrops(state, alpha), drawHumans(state, alpha), drawWarnings(state, alpha), drawAttacks(state, px, py), drawParticles(), drawPlayer(state, px, py), ctx.setTransform(dpr, 0, 0, dpr, 0, 0), drawOverlays(state, input, w, h, phase);
     }
@@ -2326,7 +2350,7 @@ button:focus-visible {
       forcedInsets: forced
     }), input = createInput(touch, SETTINGS.input), renderer = createRenderer(canvas, screen), audio = createAudio();
     audio.setEnabled(prefs.sound), renderer.setShake(prefs.shake);
-    let state = null, phase = "title", paused = !1, mode = MODES[0], seed = 1, bot = null, speed = 1, readyT = 0, endT = 0, perf = { frames: 0, sumMs: 0, worstMs: 0, peakHumans: 0 }, errors = [];
+    let state = null, phase = "title", paused = !1, mode = MODES[0], seed = 1, bot = null, speed = 1, readyT = 0, endT = 0, perf = { frames: 0, sumMs: 0, worstMs: 0, peakHumans: 0 }, wakeLock = null, errors = [];
     window.addEventListener("error", (e) => errors.push(String(e.message)));
     let ui = createUi(
       app,
@@ -2347,7 +2371,7 @@ button:focus-visible {
           startNight(mode);
         },
         onQuit() {
-          paused = !1, loop.setPaused(!1), state = null, phase = "title", renderer.reset(), ui.showTitle();
+          paused = !1, loop.setPaused(!1), state = null, phase = "title", letScreenSleep(), renderer.reset(), ui.showTitle();
         },
         onToggleSound() {
           prefs.sound = !prefs.sound, audio.setEnabled(prefs.sound), savePrefs(prefs), ui.setToggles(prefs.sound, prefs.shake);
@@ -2360,11 +2384,19 @@ button:focus-visible {
     );
     ui.setToggles(prefs.sound, prefs.shake);
     function startNight(m, forcedSeed) {
-      mode = m, seed = forcedSeed !== void 0 ? forcedSeed : Math.random() * 1e9 | 0, state = createSim(mode, seed), renderer.reset(), ui.startNight(mode), ui.showHint(SETTINGS.modes[mode].hint, SETTINGS.feel.hintSeconds), phase = "ready", paused = !1, readyT = 0, perf.frames = 0, perf.sumMs = 0, perf.worstMs = 0, perf.peakHumans = 0, loop.setPaused(!1), input.setEnabled(!0), navigator.wakeLock && navigator.wakeLock.request && navigator.wakeLock.request("screen").catch(() => {
+      mode = m, seed = forcedSeed !== void 0 ? forcedSeed : Math.random() * 1e9 | 0, state = createSim(mode, seed), renderer.reset(), ui.startNight(mode), ui.showHint(SETTINGS.modes[mode].hint, SETTINGS.feel.hintSeconds), phase = "ready", paused = !1, readyT = 0, perf.frames = 0, perf.sumMs = 0, perf.worstMs = 0, perf.peakHumans = 0, loop.setPaused(!1), input.setEnabled(!0), !wakeLock && navigator.wakeLock && navigator.wakeLock.request && navigator.wakeLock.request("screen").then((lock) => {
+        wakeLock = lock, lock.addEventListener("release", () => {
+          wakeLock = null;
+        });
+      }).catch(() => {
       });
     }
+    function letScreenSleep() {
+      wakeLock && (wakeLock.release().catch(() => {
+      }), wakeLock = null);
+    }
     function setPaused(value) {
-      phase === "title" || phase === "end" || phase === "levelup" || (paused = value, loop.setPaused(value), value ? (input.cancelAll(), ui.showPause()) : (ui.hidePause(), audio.resume()));
+      phase === "title" || phase === "end" || phase === "levelup" || (paused = value, loop.setPaused(value), value ? (input.cancelAll(), ui.showPause()) : (ui.hidePause(), audio.resume(), phase === "play" && (phase = "ready", readyT = 0, ui.showHint("Touch and drag to go on.", 4))));
     }
     function handleEvents() {
       let events = state.events;
@@ -2390,7 +2422,7 @@ button:focus-visible {
 `);
     }
     function showEnd() {
-      phase = "end", input.setEnabled(!1), ui.showEnd({
+      phase = "end", letScreenSleep(), input.setEnabled(!1), ui.showEnd({
         result: state.result,
         cause: state.cause,
         mode,
@@ -2427,11 +2459,11 @@ button:focus-visible {
     }
     let debugIn = 0, slowFor = 0;
     function watchSpeed(elapsed) {
-      loop.stats.avgMs > 22 ? slowFor += elapsed : slowFor = 0, slowFor > 2 && screen.state.dprCap > 1 && (slowFor = 0, screen.setDprCap(Math.max(1, screen.state.dprCap - 0.5)));
+      loop.stats.workMs > 11 ? slowFor += elapsed : slowFor = 0, slowFor > 2 && screen.state.dprCap > 1 && (slowFor = 0, screen.setDprCap(Math.max(1, screen.state.dprCap - 0.5)));
     }
     function draw(alpha, elapsed) {
       let still = phase === "levelup" || paused || phase === "end";
-      if (renderer.draw(state, phase, still ? 1 : alpha, elapsed, input.state), ui.update(state), audio.update(state, elapsed, phase === "play" && !paused), phase === "play" && !paused && state.t > 1 && (watchSpeed(elapsed), perf.frames++, perf.sumMs += loop.stats.frameMs, loop.stats.frameMs > perf.worstMs && (perf.worstMs = loop.stats.frameMs)), debugIn -= elapsed, debugIn <= 0) {
+      if (phase === "play" && !paused && state.t > 1 && watchSpeed(elapsed), renderer.draw(state, phase, still ? 1 : alpha, elapsed, input.state), ui.update(state), audio.update(state, elapsed, phase === "play" && !paused), phase === "play" && !paused && state.t > 1 && (perf.frames++, perf.sumMs += loop.stats.frameMs, loop.stats.frameMs > perf.worstMs && (perf.worstMs = loop.stats.frameMs)), debugIn -= elapsed, debugIn <= 0) {
         debugIn = 0.5;
         let sc = screen.state;
         ui.setDebug(
@@ -2444,7 +2476,7 @@ button:focus-visible {
       document.hidden ? (audio.suspend(), (phase === "play" || phase === "ready") && setPaused(!0)) : paused || audio.resume();
     }), window.addEventListener("keydown", (e) => {
       phase === "levelup" && (e.key === "1" || e.key === "2" || e.key === "3") ? document.querySelectorAll(".screen-cards .card")[Number(e.key) - 1].click() : (e.key === "Escape" || e.key === "p") && setPaused(!paused);
-    }), window.addEventListener("pointerdown", () => audio.unlock(), { once: !0 }), ui.showTitle(), loop.start();
+    }), window.addEventListener("pointerup", () => audio.unlock(), !0), window.addEventListener("keydown", () => audio.unlock(), !0), ui.showTitle(), loop.start();
   }
   boot();
 })();
