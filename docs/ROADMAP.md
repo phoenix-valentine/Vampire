@@ -64,18 +64,22 @@ Added one at a time, in this order. Each must pass the four-part test in `PROCES
 Guard: the words "mutation", "hybrid" and "evolution" stay out of the design. The neutral word is
 "power" until step 1.6 names the content system.
 
-## The 16 blocks and four gates (reconstructed)
+## The 16 blocks and four gates (from the owner's Game Blueprint and Game Building Blocks)
 
-Version 2 pointed to a "Game Blueprint" with 16 blocks and gates A to D that was not provided. This
-reconstruction keeps the block numbers the plan names (6, 7, 8, 9, 12, 13) and the plan's order,
-"controls and feel first". If the Blueprint is supplied later, this table is aligned to it.
-
-| Gate | Blocks | The gate asks |
+| Layer and gate | Blocks | The gate asks (Blueprint step 10) |
 |---|---|---|
-| A Feel | 1 Controls and movement. 2 Camera and arena. 3 Attack and hit feedback. 4 Hunters and spawning | Is moving and hitting good with nothing else in the game? |
-| B Systems | 5 Blood economy. 6 Pacing and fairness. 7 Builds and choices. 8 Run structure and instant start | Is a whole run worth playing, balanced and fair? |
-| C Presentation | 9 Readability. 10 Art. 11 Sound. 12 Theme that explains the rules | Can it be read at its busiest, muted, and understood without text? |
-| D Shell | 13 Onboarding. 14 HUD, menus and phone layout. 15 Saving and unlocks. 16 Performance and robustness | Can a stranger open the link and play, on a phone, with nothing breaking? |
+| 1 Core, Gate A | 1 Core loop. 2 Controls. 3 Feedback and feel. 4 Rules and systems | Controls and feel polished; the core is fun with plain shapes; all numbers in the settings object; smoke test passes |
+| 2 Structure, Gate B | 5 Content. 6 Difficulty and pacing. 7 Progression and rewards. 8 Session structure | A full run works from start to retry; run length on target; difficulty rises and failure feels fair; upgrade choices are real; the busiest moment holds a steady frame rate |
+| 3 Presentation, Gate C | 9 Readability and interface. 10 Art. 11 Audio. 12 Theme and story | The busiest moment is readable at phone size; no placeholders; fully playable muted; one consistent style |
+| 4 Wrapper, Gate D | 13 Onboarding. 14 Menus and settings. 15 Saving. 16 Platform | A stranger can open, learn, play, lose, retry, mute and come back; saving works; smooth on a real phone after 10 minutes |
+
+Build order (Blueprint step 8): 2 and 3 polished first; then 1 and 4 good enough; then 5 to 8; then 9 to 12; then 13 to 16; polish everything in order after feature freeze.
+
+**The owner's first stop is Blueprint step 7:** a plain-shapes prototype of blocks 1 to 4 with two or three
+variations as toggles. It was built as v0.1.0 (see `docs/DESIGN.md` and `CHANGELOG.md`). The step cards for
+milestones 0 and 1 below were written before the owner's documents arrived; where they disagree with
+`docs/STATE.md`, `STATE.md` is right. After the owner's verdict the design document is locked as v1 and
+the cards from 2.1 onward apply, using the block numbers in this table.
 
 ---
 
