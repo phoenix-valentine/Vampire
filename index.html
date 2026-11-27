@@ -23,28 +23,28 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0e17;col
 #gear.on{background:#5fe3ff;color:#06202a;border-color:#5fe3ff}
 
 /* ---------- settings panel ---------- */
-#panel{position:fixed;z-index:45;top:0;right:0;bottom:0;width:min(330px,88vw);display:flex;flex-direction:column;
+#panel{position:fixed;z-index:45;top:0;right:0;bottom:0;width:calc(min(330px,88vw) + env(safe-area-inset-right,0px));display:flex;flex-direction:column;
   background:rgba(12,16,28,.95);border-left:1px solid rgba(255,255,255,.12);
   transform:translateX(105%);transition:transform .16s ease-out;visibility:hidden;
-  padding:calc(74px + env(safe-area-inset-top,0px)) 0 env(safe-area-inset-bottom,0px) 0}
+  padding:calc(74px + env(safe-area-inset-top,0px)) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) 0}
 #panel.open{transform:none;visibility:visible}
 #panelHead{display:flex;gap:8px;padding:0 12px 10px 12px;flex-wrap:wrap}
 #panelBody{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 12px 16px 12px;touch-action:pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-.pbtn{flex:1 1 auto;min-height:40px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);
+.pbtn{flex:1 1 auto;min-height:44px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);
   background:rgba(255,255,255,.07);color:#e8ecf5;font-weight:600;font-size:13px;line-height:1.1;font-family:inherit;cursor:pointer;touch-action:manipulation;white-space:nowrap}
 .pbtn:active{background:rgba(255,255,255,.2)}
 .pbtn.warn{border-color:rgba(255,120,120,.5);color:#ffb3b3}
 .pbtn.on{background:#5fe3ff;color:#06202a;border-color:#5fe3ff}
 details{border-top:1px solid rgba(255,255,255,.1);padding:6px 0}
-summary{cursor:pointer;font-weight:700;font-size:12px;line-height:1;font-family:inherit;letter-spacing:.12em;text-transform:uppercase;color:#8fa3c8;padding:9px 0;list-style:none;touch-action:manipulation}
+summary{cursor:pointer;font-weight:700;font-size:12px;line-height:1;font-family:inherit;letter-spacing:.12em;text-transform:uppercase;color:#8fa3c8;padding:15px 0;list-style:none;touch-action:manipulation}
 summary::-webkit-details-marker{display:none}
 summary::after{content:"+";float:right;color:#5a6a8a;font-size:15px}
 details[open] summary::after{content:"\2212"}
 .row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:0 8px;padding:5px 0}
 .row .nm{font-size:14px;color:#dfe6f5}
 .row output{font:600 13px/1 ui-monospace,Menlo,Consolas,monospace;color:#5fe3ff;min-width:52px;text-align:right}
-.row.changed output{color:#ffd24d}
-.row input[type=range]{grid-column:1/3;width:100%;height:30px;margin:0;background:transparent;-webkit-appearance:none;appearance:none;touch-action:pan-y;cursor:pointer}
+.row.changed output,.row.tog.changed .nm{color:#ffd24d}
+.row input[type=range]{grid-column:1/3;width:100%;height:34px;margin:0;background:transparent;-webkit-appearance:none;appearance:none;touch-action:pan-y;cursor:pointer}
 .row input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:rgba(255,255,255,.18)}
 .row input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:rgba(255,255,255,.18)}
 .row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:24px;height:24px;border-radius:50%;background:#e8ecf5;border:3px solid #5fe3ff;margin-top:-9px}
@@ -57,19 +57,25 @@ details[open] summary::after{content:"\2212"}
 .row.tog input:checked + .sw::after{transform:translateX(20px)}
 .btnrow{display:flex;gap:8px;flex-wrap:wrap;padding:6px 0}
 .hint{font-size:12px;color:#7183a6;padding:8px 0 0 0;line-height:1.4}
+/* Overlays (level-up cards, death summary) keep clear of the open panel: beside the side drawer,
+   above the bottom sheet, or over the drawer when the screen is too narrow to share. */
+body.panel-open .overlay{right:calc(min(330px,88vw) + env(safe-area-inset-right,0px))}
+@media (orientation:landscape) and (max-width:700px){
+  body.panel-open .overlay{right:0;z-index:46}
+}
 @media (orientation:portrait) and (max-width:720px){
   #panel{top:auto;left:0;right:0;bottom:0;width:auto;height:46%;border-left:none;border-top:1px solid rgba(255,255,255,.16);
     transform:translateY(105%);padding:10px 0 env(safe-area-inset-bottom,0px) 0}
   #panel.open{transform:none}
-  body.panel-open .overlay{right:0;bottom:46%}
+  body.panel-open .overlay{right:0;bottom:46%;justify-content:flex-start}   /* little room above the sheet: start from the top and scroll */
 }
 
 /* ---------- overlays ---------- */
-.overlay{position:fixed;z-index:40;left:0;top:0;right:0;bottom:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+.overlay{position:fixed;z-index:40;left:0;top:0;right:0;bottom:0;display:none;flex-direction:column;align-items:center;
+  justify-content:center;justify-content:safe center;   /* 'safe': a stack taller than the space scrolls from its top instead of losing it */
   padding:calc(16px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px));
   background:rgba(6,8,16,.62);overflow-y:auto}
 .overlay.show{display:flex}
-body.panel-open .overlay{right:min(330px,88vw)}
 .big{font-weight:900;font-size:clamp(28px,7vmin,54px);line-height:1;font-family:inherit;letter-spacing:.08em;margin:0 0 6px 0;text-align:center}
 .sub{font-size:14px;color:#9fb0d0;margin:0 0 16px 0;text-align:center}
 #lvTitle{color:#ffe14d;animation:pop .28s cubic-bezier(.2,1.6,.4,1)}
@@ -219,6 +225,20 @@ function setSetting(k, v, fromUI) {
 function resetSettings() {
   for (const grp of SETTING_GROUPS) for (const it of grp.items) setSetting(it.k, it.d, false);
 }
+// Tap handler for buttons. A plain 'click' is never sent for a second finger while another one is
+// steering, so touch taps are taken from pointerup; touchend then cancels the click the browser would add.
+// own: the handler does the element's whole job (toggle rows, section headers), so the native action is cancelled.
+function onTap(el, fn, own) {
+  let id = -1, x = 0, y = 0;
+  el.addEventListener('pointerdown', e => { id = e.pointerId; x = e.clientX; y = e.clientY; });
+  el.addEventListener('pointerup', e => {
+    if (e.pointerType !== 'touch' || e.pointerId !== id) return;
+    id = -1;
+    if (Math.hypot(e.clientX - x, e.clientY - y) <= 12) fn(e);
+  });
+  el.addEventListener('touchend', e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+  el.addEventListener('click', e => { if (own) e.preventDefault(); fn(e); });
+}
 function buildPanel(extraButtons) {
   const body = $('panelBody');
   for (const grp of SETTING_GROUPS) {
@@ -226,6 +246,7 @@ function buildPanel(extraButtons) {
     det.open = !!grp.open;
     const sum = document.createElement('summary');
     sum.textContent = grp.g;
+    onTap(sum, () => { det.open = !det.open; }, true);
     det.appendChild(sum);
     for (const it of grp.items) {
       const row = document.createElement('label');
@@ -238,7 +259,7 @@ function buildPanel(extraButtons) {
         input.type = 'checkbox'; input.checked = it.d;
         const sw = document.createElement('span'); sw.className = 'sw';
         row.appendChild(nm); row.appendChild(input); row.appendChild(sw);
-        input.addEventListener('change', () => { setSetting(it.k, input.checked, true); input.blur(); });
+        onTap(row, () => setSetting(it.k, !S[it.k], true), true);
       } else {
         row.className = 'row';
         out = document.createElement('output');
@@ -247,6 +268,10 @@ function buildPanel(extraButtons) {
         input.setAttribute('aria-label', it.n);
         row.appendChild(nm); row.appendChild(out); row.appendChild(input);
         input.addEventListener('input', () => setSetting(it.k, parseFloat(input.value), true));
+        // A touch that turns into a scroll of the list must not leave the slider where the finger landed.
+        let before = it.d;
+        input.addEventListener('pointerdown', () => { before = S[it.k]; });
+        input.addEventListener('pointercancel', () => setSetting(it.k, before, false));
         // Drop focus after a drag so arrow keys go back to moving the hero.
         input.addEventListener('change', () => input.blur());
         input.addEventListener('pointerup', () => input.blur());
@@ -259,7 +284,7 @@ function buildPanel(extraButtons) {
       for (const b of extraButtons) {
         const el = document.createElement('button');
         el.className = 'pbtn'; el.tabIndex = -1; el.textContent = b.n;
-        el.addEventListener('click', () => { b.fn(); el.blur(); });
+        onTap(el, () => { b.fn(); el.blur(); });
         br.appendChild(el);
       }
       det.appendChild(br);
@@ -320,7 +345,7 @@ function getVignette() {
 /* ============================ 3. INPUT =============================== */
 const keys = Object.create(null);
 const MOVE_KEYS = { KeyW: 1, KeyA: 1, KeyS: 1, KeyD: 1, ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1 };
-const joy = { active: false, id: -1, ox: 0, oy: 0, x: 0, y: 0 };
+const joy = { active: false, id: -1, ox: 0, oy: 0, x: 0, y: 0, next: null };   // next: a second finger waiting to take over
 const JOY_R = 52;                    // css px for full speed
 const move = { x: 0, y: 0 };         // final move vector, length 0..1
 let usedTouch = false, hasMoved = false;
@@ -338,18 +363,25 @@ window.addEventListener('keyup', e => { keys[e.code] = false; });
 let onFocusLost = null;              // set by the UI section
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; joyEnd(); if (onFocusLost) onFocusLost(); });
 
-function joyEnd() { if (joy.active) { try { cv.releasePointerCapture(joy.id); } catch (_) {} } joy.active = false; joy.id = -1; }
+function joyEnd() { if (joy.active) { try { cv.releasePointerCapture(joy.id); } catch (_) {} } joy.active = false; joy.id = -1; joy.next = null; }
+function joyStart(id, x, y) {
+  joy.active = true; joy.id = id;
+  joy.ox = joy.x = x; joy.oy = joy.y = y;                               // starts centred, so taking over never lurches
+  try { cv.setPointerCapture(id); } catch (_) {}
+}
 cv.addEventListener('pointerdown', e => {
   if (e.pointerType === 'mouse' && e.button !== 0) return;
   try { window.focus(); cv.focus({ preventScroll: true }); } catch (_) {}
-  if (joy.active) return;
-  joy.active = true; joy.id = e.pointerId;
-  joy.ox = joy.x = e.clientX; joy.oy = joy.y = e.clientY;
-  usedTouch = e.pointerType !== 'mouse';
-  try { cv.setPointerCapture(e.pointerId); } catch (_) {}
   e.preventDefault();
+  if (joy.active) {                                                     // a second thumb: it takes over when the first lifts
+    if (e.pointerType !== 'mouse' && e.pointerId !== joy.id) joy.next = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    return;
+  }
+  usedTouch = e.pointerType !== 'mouse';
+  joyStart(e.pointerId, e.clientX, e.clientY);
 });
 cv.addEventListener('pointermove', e => {
+  if (joy.next && e.pointerId === joy.next.id) { joy.next.x = e.clientX; joy.next.y = e.clientY; return; }
   if (!joy.active || e.pointerId !== joy.id) return;
   joy.x = e.clientX; joy.y = e.clientY;
   // The anchor trails the finger, so reversing direction is always a short drag.
@@ -357,7 +389,13 @@ cv.addEventListener('pointermove', e => {
   if (d > JOY_R) { const k = (d - JOY_R) / d; joy.ox += dx * k; joy.oy += dy * k; }
   e.preventDefault();
 });
-const joyRelease = e => { if (e.pointerId === joy.id) joyEnd(); };
+const joyRelease = e => {
+  if (joy.next && e.pointerId === joy.next.id) { joy.next = null; return; }
+  if (e.pointerId !== joy.id) return;
+  const nx = joy.next;
+  joyEnd();
+  if (nx) joyStart(nx.id, nx.x, nx.y);
+};
 cv.addEventListener('pointerup', joyRelease);
 cv.addEventListener('pointercancel', joyRelease);
 cv.addEventListener('lostpointercapture', joyRelease);
@@ -399,7 +437,7 @@ function burst(x, y, n, col, speed, life, size, dx, dy, spread) {
   n *= S.particles;
   let count = n | 0; if (Math.random() < n - count) count++;
   const base = (dx || dy) ? Math.atan2(dy, dx) : 0;
-  const sp = spread === undefined ? TAU : spread;
+  const sp = (spread === undefined || !(dx || dy)) ? TAU : spread;      // no direction given: spray all the way round
   for (let i = 0; i < count; i++) {
     const a = base + (Math.random() - .5) * sp, v = speed * (.35 + Math.random() * .85);
     particle(x, y, Math.cos(a) * v, Math.sin(a) * v, life * (.6 + Math.random() * .7), size * (.7 + Math.random() * .7), col);
@@ -586,21 +624,21 @@ const ETYPES = [ET.brute, ET.split, ET.mite, ET.shard, ET.dart];   // draw order
 const PULSE = [null,
   { n: 1, dmg: 10, cd: .45, pierce: 0 },
   { n: 2, dmg: 10, cd: .45, pierce: 0 },
-  { n: 2, dmg: 14, cd: .45, pierce: 1 },
-  { n: 3, dmg: 14, cd: .38, pierce: 1 },
-  { n: 3, dmg: 16, cd: .36, pierce: 1, split: true }];
+  { n: 2, dmg: 15, cd: .42, pierce: 2 },
+  { n: 3, dmg: 15, cd: .36, pierce: 2 },
+  { n: 3, dmg: 18, cd: .33, pierce: 2, split: true }];
 const HALO = [null,
-  { n: 2, r: 58, dmg: 9,  rot: 3.3, size: 10 },
-  { n: 3, r: 58, dmg: 9,  rot: 3.3, size: 10 },
-  { n: 3, r: 74, dmg: 14, rot: 3.3, size: 13 },
-  { n: 4, r: 74, dmg: 14, rot: 4.1, size: 13 },
-  { n: 4, r: 74, dmg: 16, rot: 4.1, size: 13, outer: 3 }];
+  { n: 3, r: 86,  dmg: 14, rot: 3.3, size: 14 },
+  { n: 4, r: 86,  dmg: 14, rot: 3.3, size: 14 },
+  { n: 4, r: 100, dmg: 21, rot: 3.3, size: 16 },
+  { n: 5, r: 100, dmg: 21, rot: 4.1, size: 16 },
+  { n: 5, r: 100, dmg: 24, rot: 4.1, size: 16, outer: 4 }];
 const WAVE = [null,
-  { cd: 3.0, R: 115, dmg: 16 },
-  { cd: 3.0, R: 145, dmg: 16 },
-  { cd: 2.3, R: 145, dmg: 24 },
-  { cd: 2.3, R: 180, dmg: 24, slow: 1.2 },
-  { cd: 2.1, R: 180, dmg: 28, slow: 1.5, echo: 1 }];
+  { cd: 3.2, R: 115, dmg: 16 },
+  { cd: 3.2, R: 145, dmg: 16 },
+  { cd: 2.6, R: 145, dmg: 24 },
+  { cd: 2.6, R: 180, dmg: 24, slow: 1.0 },
+  { cd: 2.4, R: 180, dmg: 28, slow: 1.2, echo: 1 }];
 const SPARK = [null,
   { cd: 1.4,  hits: 4, dmg: 14, forks: 1 },
   { cd: 1.4,  hits: 7, dmg: 14, forks: 1 },
@@ -621,11 +659,11 @@ function star(g, n, r1, r2, rot) {
 }
 const UPG = [
   { id: 'pulse', name: 'Pulse', kind: 'weapon', color: '#5fe3ff', max: 5,
-    desc: ['Fires a bolt at the nearest enemy.', 'Twin shot: 2 bolts, each at its own target.', 'Bolts pierce one enemy and hit 40% harder.', 'Triple shot and faster firing.', 'SPLINTER: every bolt bursts into 3 shards on impact.'],
+    desc: ['Fires a bolt at the nearest enemy.', 'Twin shot: 2 bolts, each at its own target.', 'Bolts pierce two enemies, hit 50% harder and fire a little faster.', 'Triple shot and faster firing.', 'SPLINTER: every bolt bursts into 3 shards on impact.'],
     icon(g) { g.strokeStyle = this.color; g.lineWidth = 6; g.lineCap = 'round';
       for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(-14 + i * 3, 12 + i * 11); g.lineTo(8 + i * 3, -6 + i * 11); g.stroke(); } } },
   { id: 'halo', name: 'Halo', kind: 'weapon', color: '#f2fbff', max: 5,
-    desc: ['2 blades orbit you, slicing and shoving whatever they touch.', 'A third blade.', 'Wider orbit, bigger blades, 55% more damage.', 'A fourth blade and a faster spin.', 'TWIN HALO: a second, wider ring spins the other way.'],
+    desc: ['3 blades orbit you, slicing and shoving whatever they touch.', 'A fourth blade.', 'Wider orbit, bigger blades, 50% more damage.', 'A fifth blade and a faster spin.', 'TWIN HALO: a second, wider ring spins the other way.'],
     icon(g) { g.strokeStyle = 'rgba(242,251,255,.35)'; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 17, 0, TAU); g.stroke();
       g.fillStyle = this.color; for (let i = 0; i < 3; i++) { const a = -1.2 + i * TAU / 3; g.save(); g.translate(Math.cos(a) * 17, Math.sin(a) * 17); g.rotate(a + 1.6); poly(g, 3, 8, 0); g.fill(); g.restore(); } } },
   { id: 'wave', name: 'Shockwave', kind: 'weapon', color: '#8fb4ff', max: 5,
@@ -634,21 +672,21 @@ const UPG = [
       g.globalAlpha = .6; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, 11, 0, TAU); g.stroke(); g.globalAlpha = 1;
       g.fillStyle = '#fff'; g.beginPath(); g.arc(0, 0, 4, 0, TAU); g.fill(); } },
   { id: 'spark', name: 'Spark', kind: 'weapon', color: '#bfe9ff', max: 5,
-    desc: ['Lightning leaps between 4 enemies.', 'Leaps between 7 enemies.', 'Faster, and 55% more damage.', 'FORK: two chains at once.', 'STORM: longer chains, and every strike explodes.'],
+    desc: ['Lightning leaps between 4 enemies and slows them for a moment.', 'Leaps between 7 enemies.', 'Faster, and 55% more damage.', 'FORK: two chains at once.', 'STORM: longer chains, and every strike explodes.'],
     icon(g) { g.strokeStyle = this.color; g.lineWidth = 5; g.lineJoin = 'miter'; g.lineCap = 'round';
       g.beginPath(); g.moveTo(8, -21); g.lineTo(-8, -2); g.lineTo(5, 1); g.lineTo(-7, 21); g.stroke(); } },
   { id: 'overclock', name: 'Overclock', kind: 'passive', color: '#5fe3ff', max: 5,
-    desc: ['Every weapon fires 18% faster.', 'Every weapon fires 36% faster.', 'Every weapon fires 54% faster.', 'Every weapon fires 72% faster.', 'Every weapon fires 90% faster.'],
+    desc: ['Weapons fire 18% faster, and Halo spins faster.', 'Weapons fire 36% faster, and Halo spins faster.', 'Weapons fire 54% faster, and Halo spins faster.', 'Weapons fire 72% faster, and Halo spins faster.', 'Weapons fire 90% faster, and Halo spins faster.'],
     icon(g) { g.fillStyle = this.color; for (let i = 0; i < 2; i++) { g.beginPath(); g.moveTo(-18 + i * 16, -15); g.lineTo(0 + i * 16, 0); g.lineTo(-18 + i * 16, 15); g.lineTo(-11 + i * 16, 0); g.closePath(); g.fill(); } } },
   { id: 'echo', name: 'Echo', kind: 'passive', color: '#f2fbff', max: 2,
-    desc: ['+1 projectile for EVERY weapon: bolt, blade, ring and chain.', 'Another +1 projectile for every weapon.'],
+    desc: ['+1 for EVERY weapon: an extra bolt, blade and ring, and Spark leaps 2 enemies farther.', 'Another +1 for every weapon, and Spark throws an extra chain.'],
     icon(g) { g.fillStyle = this.color; g.globalAlpha = .35; g.beginPath(); g.arc(-12, 6, 9, 0, TAU); g.fill();
       g.globalAlpha = .65; g.beginPath(); g.arc(0, 0, 9, 0, TAU); g.fill(); g.globalAlpha = 1; g.beginPath(); g.arc(12, -6, 9, 0, TAU); g.fill(); } },
   { id: 'volatile', name: 'Volatile', kind: 'passive', color: '#ff9838', max: 4,
     desc: ['Enemies EXPLODE when they die, hurting their neighbours. Chain reactions.', 'Bigger, harder death explosions.', 'Bigger, harder death explosions.', 'Huge death explosions.'],
     icon(g) { g.fillStyle = this.color; star(g, 8, 22, 10, 0); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(0, 0, 5, 0, TAU); g.fill(); } },
   { id: 'deadeye', name: 'Deadeye', kind: 'passive', color: '#ffe14d', max: 4,
-    desc: ['12% of hits are critical: 2.5× damage.', '24% critical hits.', '36% critical hits.', '48% critical hits.'],
+    desc: ['15% of hits are critical: 2.5× damage and twice the shove.', '30% critical hits.', '45% critical hits.', '60% critical hits.'],
     icon(g) { g.strokeStyle = this.color; g.lineWidth = 4; g.beginPath(); g.arc(0, 0, 14, 0, TAU); g.stroke();
       g.beginPath(); g.moveTo(-23, 0); g.lineTo(-8, 0); g.moveTo(8, 0); g.lineTo(23, 0); g.moveTo(0, -23); g.lineTo(0, -8); g.moveTo(0, 8); g.lineTo(0, 23); g.stroke(); } },
   { id: 'slip', name: 'Slipstream', kind: 'passive', color: '#7dffe6', max: 4,
@@ -693,19 +731,19 @@ const AREA = () => S.area;
 const EXTRA = () => st.extra + S.extraProj;
 const maxHpBase = () => BASE_HP + st.hpBonus;      // player.hp is stored unscaled; the Max health slider scales damage taken
 // Enemy health: a gentle curve for five minutes, then it compounds so no build is safe forever.
-const hpScale = () => { const m = G.diff / 60, base = 1 + m * .5 + m * m * .08; return m > 5 ? base * Math.pow(1.5, m - 5) : base; };
+const hpScale = () => { const m = G.diff / 60, base = 1 + m * .5 + m * m * .08; return m > 5 ? base * Math.pow(1.25, m - 5) : base; };
 const OVERTIME = 600;                                // at 10:00 the swarm enrages and keeps accelerating: nobody lasts forever
-const spdScale = () => 1 + Math.min(.45, G.diff / 480 * .45) + Math.max(0, (G.diff - OVERTIME) / 30);
+const spdScale = () => 1 + Math.min(.45, G.diff / 480 * .45) + Math.max(0, (G.diff - OVERTIME) / 60);
 const kbScale = () => 1 / (1 + G.diff / 240);      // enemies get heavier, so knockback alone cannot hold the line forever
-const dmgScale = () => 1 + G.diff / 300;
+const dmgScale = () => 1 + G.diff / 420;
 const xpFor = L => { const k = L - 1; return Math.floor(5 + 4.5 * k + 1.5 * k * k); };
-// Stand still for a moment and the pickup field blooms to more than double: stopping is the greedy move.
-const magnetRange = () => BASE_MAGNET * st.magnet * S.pickupRange * (1 + 1.2 * player.bloom);
+// Stand still for a moment and the pickup field blooms by 60%: stopping is a small, greedy gamble, never a plan.
+const magnetRange = () => BASE_MAGNET * st.magnet * S.pickupRange * (1 + .6 * player.bloom);
 
 function recalc() {
   st.rate = 1 + .18 * lv.overclock;
   st.extra = lv.echo;
-  st.crit = .12 * lv.deadeye;
+  st.crit = .15 * lv.deadeye;
   st.speed = 1 + .09 * lv.slip;
   st.magnet = 1 + .5 * lv.magnet;
   st.hpBonus = 25 * lv.shell;
@@ -737,8 +775,10 @@ function newGame() {
     const a = i / 10 * TAU + rnd(.4), d = rnd(reach * .72, reach);
     spawnEnemy(ET.mite, Math.cos(a) * d, Math.sin(a) * d, false).t = 1;   // already full-size while the game waits for the first input
   }
-  paused = false;
+  setPaused(false);
   hideOverlays();
+  joy.ox = joy.x; joy.oy = joy.y;                                       // a thumb still resting on the glass starts the new run centred
+  if (!adaptOff && !retried && dprCap < 2) { retried = true; dprCap = 2; resize(); }   // one fresh try at full sharpness after a slow patch
 }
 
 // ---------- enemies
@@ -751,7 +791,7 @@ function spawnEnemy(def, x, y, elite) {
   e.spd = def.spd * (elite ? .85 : 1) * rnd(.9, 1.1);
   e.dmg = def.dmg * (elite ? 1.6 : 1); e.xp = def.xp; e.kb = def.kb * (elite ? .22 : 1);
   e.flash = 0; e.dead = false; e.t = 0; e.cx = 0; e.cy = 0;
-  e.stamp = 0; e.waveId = 0; e.bladeT = 0; e.trailT = 0; e.slowT = 0; e.dn = null;
+  e.stamp = 0; e.bladeT = 0; e.trailT = 0; e.slowT = 0; e.dn = null;
   e.ang = Math.atan2(player.y - y, player.x - x); e.mode = 0; e.mt = rnd(.25, .6); e.seed = Math.random() * TAU;
   enemies.push(e);
   return e;
@@ -786,7 +826,8 @@ function spawnRing() {
   const rx = VW / 2 + 44, ry = VH / 2 + 44, gap = rnd(TAU), half = .6;       // a closing ring with one 70-degree way out...
   for (let i = 0; i < n && enemies.length < S.maxEnemies; i++) {
     const a = gap + half + (i + .5) / n * (TAU - 2 * half);
-    spawnEnemy(ET.mite, player.x + Math.cos(a) * rx, player.y + Math.sin(a) * ry, false);
+    const k = 1 / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a)));   // pushed out to the screen-edge rectangle, so nothing pops in on screen
+    spawnEnemy(ET.mite, player.x + Math.cos(a) * rx * k, player.y + Math.sin(a) * ry * k, false);
   }
   // ...and a bomb planted on the side farthest from the exit: leave safely, or go deeper and blow the ring apart
   const d = Math.min(rx, ry) * .5;
@@ -821,17 +862,19 @@ function director(dt) {
   const t = G.diff, p = t % CYCLE;
   G.cresting = (p >= 30 && p < 38) || t >= OVERTIME;
   if (t >= OVERTIME && !G.overtime) { G.overtime = true; banner('OVERTIME', '#ff4d5e'); }
-  if (S.spawnRate > 0) {
-    if (t >= G.nextCrest) {
-      G.nextCrest += CYCLE;
-      const c = G.crest++;
+  // Set-pieces run on the difficulty clock. Slots missed while spawning was off, or jumped past, are dropped rather than replayed all at once.
+  const on = S.spawnRate > 0;
+  if (t >= G.nextCrest) {
+    const late = t - G.nextCrest, c = G.crest;
+    do { G.nextCrest += CYCLE; G.crest++; } while (G.nextCrest <= t);
+    if (on && late < 8) {
       if (c === 0) banner('SURGE', '#ff9838');
       else if (c % 2 === 1) { spawnDartPack(false); spawnDartPack(true); banner('CROSSFIRE', '#ff9838'); }
       else spawnRing();
     }
-    if (t >= G.nextElite) { G.nextElite += 60; spawnElite(); }
-    if (t >= G.nextPack) { G.nextPack = t + rnd(11, 17) - Math.min(5, t / 120); spawnDartPack(false); }
   }
+  if (t >= G.nextElite) { do G.nextElite += 60; while (G.nextElite <= t); if (on) spawnElite(); }
+  if (t >= G.nextPack) { G.nextPack = t + rnd(11, 17) - Math.min(5, t / 120); if (on) spawnDartPack(false); }
   G.spawnAcc += (1.3 + .052 * t) * tideMult(t) * S.spawnRate * dt;
   let guard = 0;
   while (G.spawnAcc >= 1 && guard++ < 60) {
@@ -899,7 +942,8 @@ function updateEnemies(dt) {
 // Soft separation so the swarm spreads into a crowd instead of stacking on one pixel.
 // Each pair is visited once: own cell (higher index only) plus four forward neighbours.
 const SEP_OX = [0, 1, -1, 0, 1], SEP_OY = [0, 0, 1, 1, 1];
-function separate() {
+function separate(times) {
+  const SK = Math.min(1, .5 * times);                                   // one pass can stand in for several sub-steps
   for (let i = 0, n = enemies.length; i < n; i++) {
     const a = enemies[i];
     if (a.dead || a.cx === undefined) continue;
@@ -911,7 +955,7 @@ function separate() {
         if (b.dead || b.cx !== cx || b.cy !== cy) continue;
         const dx = b.x - a.x, dy = b.y - a.y, rr = a.r + b.r, d2 = dx * dx + dy * dy;
         if (d2 >= rr * rr || d2 < 1e-6) continue;
-        const d = Math.sqrt(d2), o = (rr - d) / d * .5;
+        const d = Math.sqrt(d2), o = (rr - d) / d * SK;
         const wa = b.r / rr, wb = a.r / rr;                             // small bodies give way to big ones
         a.x -= dx * o * wa; a.y -= dy * o * wa;
         b.x += dx * o * wb; b.y += dy * o * wb;
@@ -939,7 +983,7 @@ function hurtEnemy(e, dmg, nx, ny, kb, noCrit) {
   G.dmgBy[SRC] = (G.dmgBy[SRC] || 0) + Math.min(dmg, e.hp * S.enemyHealth);
   e.hp -= dmg / S.enemyHealth;
   e.flash = .09;
-  if (kb) { const k = kb * e.kb * S.knockback * kbScale(); e.kx += nx * k; e.ky += ny * k; }
+  if (kb) { const k = kb * (crit ? 2 : 1) * e.kb * S.knockback * kbScale(); e.kx += nx * k; e.ky += ny * k; }   // a critical hit shoves twice as hard
   if (S.dmgNumbers) {
     const n = e.dn;
     if (n && n.owner === e.uid && n.t < .25) { n.val += dmg; n.t = Math.min(n.t, .04); if (crit) { n.kind = DN_CRIT; n.sc = .34; } }   // rapid hits merge into one number
@@ -1066,6 +1110,7 @@ function fireBolt(x, y, ang, dmg, pierce, split, shard, skipUid) {
   bolts.push(b);
 }
 const pulseTargets = [];
+const BOLT_KB = 240, HALO_KB = 380, WAVE_KB = 320, SPARK_KB = 70, SPARK_SLOW = .7;   // crowd control per weapon
 function updatePulse(dt, L) {
   wp.pulseT -= dt * RATE();
   if (wp.pulseT > 0) return;
@@ -1092,7 +1137,7 @@ function updatePulse(dt, L) {
     let a = Math.atan2(e.y + e.mvy * lead - py, e.x + e.mvx * lead - px);
     if (k >= pulseTargets.length) { const j = ((k - pulseTargets.length) >> 1) + 1; a += (k & 1 ? 1 : -1) * j * .13; }   // spare bolts fan out
     fireBolt(px + Math.cos(a) * 12, py + Math.sin(a) * 12, a, dmg, L.pierce, !!L.split, false, 0);
-    burst(px + Math.cos(a) * 14, py + Math.sin(a) * 14, 1.5, C_CYAN, 130, .16, 3, Math.cos(a), Math.sin(a), .9);
+    burst(px + Math.cos(a) * 14, py + Math.sin(a) * 14, 1.5 + 1.5 * lv.overclock, C_CYAN, 130 + 30 * lv.overclock, .16, 3, Math.cos(a), Math.sin(a), .9);   // Overclock shows as a hotter muzzle flash
   }
   player.kick = .08;
   wp.pulseT += L.cd;
@@ -1103,15 +1148,18 @@ function updateBolts(dt) {
   const ps = S.projSpeed;
   for (let i = bolts.length - 1; i >= 0; i--) {
     const b = bolts[i];
-    b.x += b.vx * ps * dt; b.y += b.vy * ps * dt; b.life -= dt;
-    const n = queryCircle(b.x, b.y, b.r, Q1);
-    if (n) {
-      const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy) || 1, nx = b.vx / sp, ny = b.vy / sp;
+    const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy) || 1, nx = b.vx / sp, ny = b.vy / sp;
+    // Swept in hops of at most 12 units, so a fast bolt (or a long frame) can never skip over a body.
+    const hops = Math.max(1, Math.ceil(sp * ps * dt / 12)), h = ps * dt / hops;
+    b.life -= dt;
+    for (let hop = 0; hop < hops && b.life > 0; hop++) {
+      b.x += b.vx * h; b.y += b.vy * h;
+      const n = queryCircle(b.x, b.y, b.r, Q1);
       for (let k = 0; k < n; k++) {
         const e = Q1[k];
         if (e.dead || b.hits.indexOf(e.uid) !== -1) continue;
         b.hits.push(e.uid);
-        hurtEnemy(e, b.dmg, nx, ny, b.shard ? 80 : 150);
+        hurtEnemy(e, b.dmg, nx, ny, b.shard ? BOLT_KB * .55 : BOLT_KB);
         burst(b.x, b.y, 2, C_CYAN, 170, .2, 3, -nx, -ny, 1.6);
         if (b.split) {
           const a = Math.atan2(ny, nx);
@@ -1135,7 +1183,7 @@ function haloRing(n, R, a0, size, dmg, cd, dir) {
       if (G.time < e.bladeT) continue;
       e.bladeT = G.time + cd;
       const dx = e.x - player.x, dy = e.y - player.y, d = Math.sqrt(dx * dx + dy * dy) || 1;
-      hurtEnemy(e, dmg, dx / d, dy / d, 240);
+      hurtEnemy(e, dmg, dx / d, dy / d, HALO_KB);
       burst(e.x, e.y, 2, C_WHITE, 190, .22, 3, dx / d, dy / d, 1.4);
     }
   }
@@ -1150,7 +1198,7 @@ function updateHalo(dt, L) {
   if (L.outer) haloRing(L.outer + (ex >> 1), L.r * 1.75 * a, -wp.haloA * .8, L.size * 1.15 * a, dmg, cd, -1);
 }
 function emitWave(R, dmg, slow, delay) {
-  waves.push({ x: player.x, y: player.y, R, dmg, slow, delay, t: 0, id: ++G.stamp, live: delay <= 0 });
+  waves.push({ x: player.x, y: player.y, R, dmg, slow, delay, t: 0, hit: new Set(), live: delay <= 0 });   // hit: enemies this ring has already struck
   if (delay <= 0) addShake(.16);
 }
 function updateWave(dt, L) {
@@ -1174,11 +1222,11 @@ function updateWaves(dt) {
     const n = queryCircle(w.x, w.y, r, Q1);
     for (let j = 0; j < n; j++) {
       const e = Q1[j];
-      if (e.waveId === w.id) continue;
-      e.waveId = w.id;
+      if (w.hit.has(e.uid)) continue;                                  // one hit per ring, however many rings overlap
+      w.hit.add(e.uid);
       const dx = e.x - w.x, dy = e.y - w.y, d = Math.sqrt(dx * dx + dy * dy) || 1;
-      if (w.slow) e.slowT = w.slow;
-      hurtEnemy(e, w.dmg, dx / d, dy / d, 380);
+      if (w.slow) e.slowT = Math.max(e.slowT, w.slow);
+      hurtEnemy(e, w.dmg, dx / d, dy / d, WAVE_KB);
     }
     if (w.t >= WAVE_DUR + .12) { waves[i] = waves[waves.length - 1]; waves.pop(); }
   }
@@ -1188,7 +1236,7 @@ function updateSpark(dt, L) {
   wp.sparkT -= dt * RATE();
   if (wp.sparkT > 0) return;
   const a = AREA(), stamp = ++G.stamp, dmg = DMG(L.dmg);
-  const forks = L.forks + (EXTRA() >> 1), hits = L.hits + (EXTRA() & 1) * 2;
+  const extra = EXTRA(), forks = L.forks + (extra >> 1), hits = L.hits + ((extra + 1) >> 1) * 2;   // extra projectiles: longer chains first, then more of them
   let any = false;
   for (let f = 0; f < forks; f++) {
     let cx = player.x, cy = player.y, range = 330;
@@ -1199,7 +1247,8 @@ function updateSpark(dt, L) {
       const dx = e.x - cx, dy = e.y - cy, d = Math.sqrt(dx * dx + dy * dy) || 1;
       if (zaps.length < 160) zaps.push({ x1: cx, y1: cy, x2: e.x, y2: e.y, t: .13 });
       const ex = e.x, ey = e.y;
-      hurtEnemy(e, dmg, dx / d, dy / d, 70);
+      if (SPARK_SLOW) e.slowT = Math.max(e.slowT, SPARK_SLOW);
+      hurtEnemy(e, dmg, dx / d, dy / d, SPARK_KB);
       burst(ex, ey, 3, C_CYAN, 210, .22, 3);
       if (L.storm && blasts.length < 500) blasts.push({ x: ex, y: ey, r: 42 * a, dmg: dmg * .5, t: .04 + h * .03, kb: 120, col: '#bfe9ff', pc: C_CYAN, src: 'spark' });
       cx = ex; cy = ey; range = 150 * a;
@@ -1267,7 +1316,7 @@ function updateTrail(dt, L) {
   wp.trailT -= dt;
   if (wp.trailT > 0) return;
   wp.trailT = .1;
-  const dmg = DMG(4 + 4 * L), r = 11 * AREA();
+  const dmg = DMG(5 + 5 * L), r = 13 * AREA();
   for (let i = 0; i < trail.length - 1; i++) {
     const nd = trail[i];
     const n = queryCircle(nd.x, nd.y, r, Q1);
@@ -1348,7 +1397,9 @@ function updateGems(dt) {
     let got = d2 < 19 * 19 && g.t > .1;
     if (!g.mag) {
       g.x += g.vx * dt; g.y += g.vy * dt; g.vx *= fr; g.vy *= fr;
-      if (d2 < mr2 && g.t > .15) { g.mag = true; g.ms = -150; }       // flinches away, then snaps in
+      // flinches away, then snaps in. Before the first level-up, gems left lying for 4 s fly in on their own,
+      // so even a player who only runs away sees the cards inside the first half minute.
+      if ((d2 < mr2 && g.t > .15) || (G.level === 1 && g.t > 4 && !g.kind)) { g.mag = true; g.ms = -150; }
     } else {
       g.ms = Math.min(g.ms + 1700 * dt, 950);
       const d = Math.sqrt(d2) || 1;
@@ -1397,7 +1448,8 @@ function rollChoices() {
 }
 
 // ---------- one simulation step
-function step(dt) {
+// sep: how many sub-steps this step's crowd separation stands in for (0 = skip it; the frame loop runs it once, on the last sub-step)
+function step(dt, sep) {
   if (G.state === 'play') {
     G.time += dt;
     director(dt);
@@ -1405,7 +1457,7 @@ function step(dt) {
   }
   updateEnemies(dt);
   rebuildGrid();
-  separate();
+  if (sep !== 0) separate(sep || 1);
   if (G.state === 'play') updateWeapons(dt);
   updateBolts(dt);
   updateWaves(dt);
@@ -1419,6 +1471,8 @@ const FONT = 'system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-ser
 const MONO = 'ui-monospace,Menlo,Consolas,monospace';
 const fmtTime = t => { const s = Math.floor(t); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
+// Outlines are closed by re-tracing the first edge, not closePath(): on a path holding hundreds of
+// shapes Chrome's closePath() gets slower with every shape already in the path.
 function shapePath(e, s) {
   const r = e.r * s, x = e.x, y = e.y;
   switch (e.def.shape) {
@@ -1428,15 +1482,15 @@ function shapePath(e, s) {
       ctx.moveTo(x + c * R, y + sn * R);
       ctx.lineTo(x - c * b - sn * w, y - sn * b + c * w);
       ctx.lineTo(x - c * b + sn * w, y - sn * b - c * w);
-      ctx.closePath(); break; }
+      ctx.lineTo(x + c * R, y + sn * R); ctx.lineTo(x - c * b - sn * w, y - sn * b + c * w); break; }
     case SH_SQUARE: {
       const a = e.seed + e.t * .5, c = Math.cos(a) * r * 1.25, sn = Math.sin(a) * r * 1.25;
       ctx.moveTo(x + c, y + sn); ctx.lineTo(x - sn, y + c); ctx.lineTo(x - c, y - sn); ctx.lineTo(x + sn, y - c);
-      ctx.closePath(); break; }
+      ctx.lineTo(x + c, y + sn); ctx.lineTo(x - sn, y + c); break; }
     default: {
       const a0 = e.seed + e.t * .9, R = r * 1.12;
-      for (let k = 0; k < 6; k++) { const a = a0 + k * 1.0471975512, px = x + Math.cos(a) * R, py = y + Math.sin(a) * R; if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
-      ctx.closePath(); }
+      for (let k = 0; k < 8; k++) { const a = a0 + k * 1.0471975512, px = x + Math.cos(a) * R, py = y + Math.sin(a) * R; if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py); }
+    }
   }
 }
 function drawGrid(x0, y0, x1, y1) {
@@ -1498,7 +1552,7 @@ function drawGround() {
 }
 function gemPath(g, r) {
   const s = r * (1 + .14 * Math.sin(g.t * 6 + g.seed)), x = g.x, y = g.y;
-  ctx.moveTo(x, y - s); ctx.lineTo(x + s * .72, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * .72, y); ctx.closePath();
+  ctx.moveTo(x, y - s); ctx.lineTo(x + s * .72, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * .72, y); ctx.lineTo(x, y - s); ctx.lineTo(x + s * .72, y);
 }
 function drawGems(x0, y0, x1, y1) {
   for (let tier = 0; tier < 3; tier++) {
@@ -1576,7 +1630,7 @@ function drawBolts() {
   for (let pass = 0; pass < 2; pass++) {
     ctx.beginPath();
     for (let i = 0; i < bolts.length; i++) {
-      const b = bolts[i], k = (b.shard ? .02 : .032) * S.projSpeed;
+      const b = bolts[i], k = (b.shard ? .02 : .032) * S.projSpeed * (1 + .22 * lv.overclock);   // Overclock: longer streaks
       ctx.moveTo(b.x - b.vx * k, b.y - b.vy * k); ctx.lineTo(b.x, b.y);
     }
     if (pass === 0) { ctx.strokeStyle = '#5fe3ff'; ctx.lineWidth = 8 * AREA(); }
@@ -1665,18 +1719,20 @@ function drawHUD(rdt) {
   ctx.fillStyle = hf > .5 ? '#5dff8a' : hf > .25 ? '#ffe14d' : '#ff5a6a'; ctx.fillRect(0, top + 11, W * hf, 5);
 
   ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(11,14,23,.85)'; ctx.lineWidth = 4;
+  const midX = W / 2 + offTX, midY = H / 2 + offTY, roomX = W - panelInset;   // centre and width of the part the panel leaves visible
+  const tight = roomX < 260;                                           // a sliver of playfield beside the drawer: timer drops to a second row
   ctx.textAlign = 'left'; ctx.font = '800 17px ' + FONT; ctx.fillStyle = '#ffe14d'; outlinedText('LV ' + G.level, left, top + 35);
-  ctx.font = '600 13px ' + FONT; ctx.fillStyle = '#c6d1e8'; outlinedText(G.kills + ' kills', left, top + 55);
-  ctx.textAlign = 'center'; ctx.font = '800 22px ' + MONO; ctx.fillStyle = '#ffffff'; outlinedText(fmtTime(G.time), W / 2, top + 38);
+  if (!tight) { ctx.font = '600 13px ' + FONT; ctx.fillStyle = '#c6d1e8'; outlinedText(G.kills + ' kills', left, top + 55); }
+  ctx.textAlign = 'center'; ctx.font = '800 ' + (tight ? 18 : 22) + 'px ' + MONO; ctx.fillStyle = '#ffffff'; outlinedText(fmtTime(G.time), midX, top + (tight ? 59 : 38));
   ctx.textAlign = 'right'; ctx.font = '600 12px ' + MONO; ctx.lineWidth = 3;
   const fx = panelInset ? W - panelInset - 10 : right - 60;            // always clear of the gear and the open panel
   ctx.fillStyle = fps < 45 ? '#ff9838' : '#8fa3c8'; outlinedText(fpsText, fx, top + 36);
-  ctx.fillStyle = '#8fa3c8'; outlinedText(enemies.length + ' foes', fx, top + 52);
+  if (!tight) { ctx.fillStyle = '#8fa3c8'; outlinedText(enemies.length + ' foes', fx, top + 52); }
 
   // owned upgrades with their levels
   ctx.textAlign = 'center'; ctx.font = '700 10px ' + MONO;
   for (let i = 0; i < G.owned.length; i++) {
-    const u = UPG_BY_ID[G.owned[i]], x = left + 11 + i * 27, y = top + 82;
+    const u = UPG_BY_ID[G.owned[i]], x = left + 11 + i * 27, y = top + (tight ? 88 : 82);
     ctx.fillStyle = 'rgba(11,14,23,.6)'; ctx.fillRect(x - 12, y - 12, 24, 24);
     ctx.save(); ctx.translate(x, y); ctx.scale(.4, .4); u.icon(ctx); ctx.restore();
     ctx.fillStyle = lv[u.id] >= u.max ? '#ffe14d' : '#ffffff'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(11,14,23,.9)';
@@ -1691,26 +1747,28 @@ function drawHUD(rdt) {
       const k = b.t / life, s = b.t < .12 ? .6 + b.t / .12 * .55 : Math.max(1, 1.15 - (b.t - .12) * 1.2);
       ctx.save(); ctx.translate(W / 2 + offX, top + 122); ctx.scale(s, s);
       ctx.globalAlpha = k > .7 ? (1 - k) / .3 : 1;
-      ctx.font = '900 ' + Math.round(Math.min(34, W * .075)) + 'px ' + FONT; ctx.textAlign = 'center';
+      ctx.font = '900 ' + Math.round(Math.min(34, roomX * .075)) + 'px ' + FONT; ctx.textAlign = 'center';
       ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(11,14,23,.85)'; ctx.fillStyle = b.color;
       outlinedText(b.text, 0, 0);
       ctx.restore();
     }
   }
-  if (paused && (G.state === 'play')) {
+  if (paused && G.state !== 'levelup' && G.state !== 'dead') {
     ctx.fillStyle = 'rgba(6,8,16,.45)'; ctx.fillRect(0, 0, W, H);
     ctx.textAlign = 'center'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(11,14,23,.85)';
-    ctx.font = '900 36px ' + FONT; ctx.fillStyle = '#ffffff'; outlinedText('PAUSED', W / 2, H / 2 - 10);
-    ctx.font = '600 14px ' + FONT; ctx.fillStyle = '#b9c5de'; ctx.lineWidth = 4; outlinedText('Tap the playfield or press P to resume', W / 2, H / 2 + 24);
+    ctx.font = '900 ' + (roomX < 220 ? 26 : 36) + 'px ' + FONT; ctx.fillStyle = '#ffffff'; outlinedText('PAUSED', midX, midY - 10);
+    ctx.font = '600 14px ' + FONT; ctx.fillStyle = '#b9c5de'; ctx.lineWidth = 4;
+    outlinedText(roomX < 300 ? 'Tap to resume' : IS_COARSE ? 'Tap the playfield to resume' : 'Click the playfield or press P to resume', midX, midY + 24);
   }
   if (hasMoved && hintA > 0) hintA -= rdt * 1.6;
   if (hintA > 0 && (G.state === 'play' || G.state === 'ready') && !paused) {
     ctx.globalAlpha = clamp(hintA, 0, 1);
     ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(11,14,23,.85)';
     ctx.font = '800 20px ' + FONT; ctx.fillStyle = '#ffffff';
-    outlinedText(IS_COARSE ? 'Drag anywhere to move' : 'WASD or arrow keys to move', W / 2, H * .74);
+    const hy = (H + 2 * offTY) * .74;
+    outlinedText(IS_COARSE ? 'Drag anywhere to move' : roomX < 330 ? 'WASD / arrows to move' : 'WASD or arrow keys to move', midX, hy);
     ctx.font = '600 14px ' + FONT; ctx.fillStyle = '#b9c5de'; ctx.lineWidth = 4;
-    outlinedText(IS_COARSE ? 'You attack automatically' : 'You attack automatically · dragging works too', W / 2, H * .74 + 26);
+    outlinedText(IS_COARSE || roomX < 400 ? 'You attack automatically' : 'You attack automatically · dragging works too', midX, hy + 26);
     ctx.globalAlpha = 1;
   }
 }
@@ -1746,7 +1804,7 @@ function render(rdt) {
     for (let i = 0; i < gems.length; i++) { const g = gems[i]; if (g.kind) drawIndicator(g.x, g.y, g.kind === 1 ? '#5dff8a' : g.kind === 2 ? '#5fe3ff' : '#ffffff', false); }
   }
   drawHUD(rdt);
-  if (joy.active && alive && !paused) {                                // floating stick, drawn where the drag started
+  if (joy.active && G.state === 'play' && !paused) {                   // floating stick, drawn where the drag started
     const dx = joy.x - joy.ox, dy = joy.y - joy.oy, d = Math.hypot(dx, dy) || 1, m = Math.min(d, JOY_R);
     ctx.globalAlpha = .22; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(joy.ox, joy.oy, JOY_R, 0, TAU); ctx.stroke();
@@ -1765,7 +1823,6 @@ function hideOverlays() { elLv.classList.remove('show'); elOver.classList.remove
 function markSel() { for (let i = 0; i < elCards.children.length; i++) elCards.children[i].classList.toggle('sel', i === sel); }
 function openLevelUp() {
   G.state = 'levelup'; G.lvT = 0;
-  joyEnd();
   choices = rollChoices(); sel = -1;
   elCards.textContent = '';
   choices.forEach((u, i) => {
@@ -1783,7 +1840,7 @@ function openLevelUp() {
     body.appendChild(nm); body.appendChild(tag); body.appendChild(ds);
     const key = document.createElement('div'); key.className = 'ck'; key.textContent = 'press ' + (i + 1);
     b.appendChild(ic); b.appendChild(body); b.appendChild(key);
-    b.addEventListener('click', () => choose(i));
+    onTap(b, () => choose(i));
     elCards.appendChild(b);
   });
   // Cards ignore input for a moment so a finger that was steering cannot pick one by accident.
@@ -1800,6 +1857,7 @@ function choose(i) {
   if (G.pendingLv > 0) { openLevelUp(); return; }
   elLv.classList.remove('show');
   G.state = 'play';
+  joy.ox = joy.x; joy.oy = joy.y;                                       // a thumb that never lifted starts again from centre: no lurch
   // Breathing room on the way back in: a blast that shoves the swarm away, and a moment of safety.
   player.iframe = Math.max(player.iframe, .9);
   G.rampIn = .35;
@@ -1809,7 +1867,6 @@ function choose(i) {
 }
 function showGameOver() {
   G.state = 'dead';
-  joyEnd();
   const best = G.time > bestTime && runs > 0;
   bestTime = Math.max(bestTime, G.time); runs++;
   $('stTime').textContent = fmtTime(G.time);
@@ -1844,10 +1901,10 @@ function togglePanel(v) {
   elGear.classList.toggle('on', panelOpen);
   measurePanel();
 }
-elGear.addEventListener('click', () => { togglePanel(); elGear.blur(); });
-elPause.addEventListener('click', () => { setPaused(!paused); elPause.blur(); });
-$('btnReset').addEventListener('click', e => { resetSettings(); e.currentTarget.blur(); });
-elAgain.addEventListener('click', () => { elAgain.blur(); restart(); });
+onTap(elGear, () => { togglePanel(); elGear.blur(); });
+onTap(elPause, () => { setPaused(!paused); elPause.blur(); });
+onTap($('btnReset'), () => { resetSettings(); $('btnReset').blur(); });
+onTap(elAgain, () => { elAgain.blur(); restart(); });
 cv.addEventListener('pointerdown', () => { if (paused) setPaused(false); });
 document.addEventListener('visibilitychange', () => {
   last = 0;
@@ -1872,18 +1929,22 @@ onKeyAction = e => {
   if (G.state === 'dead') { if (c === 'Enter' || c === 'Space' || c === 'KeyR') restart(); return; }
   if (c === 'KeyT') togglePanel();
   else if (c === 'Escape' && panelOpen) togglePanel(false);
-  else if (c === 'KeyP' || c === 'Escape') { if (G.state === 'play') setPaused(!paused); }
+  else if (c === 'KeyP' || c === 'Escape') { if (paused || G.state === 'play') setPaused(!paused); }
 };
 
+// Test buttons. Before the first move they also start the run, so they never look dead.
+const live = () => { if (G.state === 'ready') { G.state = 'play'; everPlayed = true; } return G.state === 'play'; };
 buildPanel([
-  { n: 'Level up now', fn: () => { if (G.state === 'play') gainLevel(); } },
-  { n: 'Skip ahead 1 min', fn: () => { if (G.state === 'play') G.diff += 60; } },
-  { n: 'Clear enemies', fn: () => { if (G.state === 'play') for (let i = enemies.length - 1; i >= 0; i--) if (!enemies[i].dead) killEnemy(enemies[i], 0, 0); } },
+  { n: 'Level up now', fn: () => { if (live()) gainLevel(); } },
+  { n: 'Skip ahead 1 min', fn: () => { if (live()) G.diff += 60; } },
+  // two passes: Splitters release Shardlings as they die, and those go too
+  { n: 'Clear enemies', fn: () => { if (live()) for (let p = 0; p < 2; p++) for (let i = enemies.length - 1; i >= 0; i--) if (!enemies[i].dead) killEnemy(enemies[i], 0, 0); } },
   { n: 'Restart run', fn: () => { newGame(); } },
 ]);
 
 /* ============================ 10. MAIN LOOP ========================== */
 let last = 0, fpsT = 0, fpsN = 0, lowFps = 0;
+let lowBest = 0, probeN = 0, probeBest = 0, probeFps = 0, probeCap = 2, adaptOff = false, retried = false;   // adaptive resolution: see frame()
 function frame(now) {
   requestAnimationFrame(frame);
   if (!last) { last = now; render(0); return; }
@@ -1894,9 +1955,15 @@ function frame(now) {
   fpsT += raw; fpsN++;
   if (fpsT >= .5) {
     fps = fpsN / fpsT; fpsText = Math.round(fps) + ' fps'; fpsT = 0; fpsN = 0;
-    // If the device cannot keep up, quietly render at a lower pixel density rather than drop frames.
-    lowFps = (fps < 42 && G.state === 'play' && !paused) ? lowFps + 1 : 0;
-    if (lowFps >= 4 && dprCap > 1) { dprCap = Math.max(1, dprCap - .5); lowFps = 0; resize(); }
+    // If the device cannot keep up, render at a lower pixel density rather than drop frames. Each drop is
+    // checked over the next two seconds: if it bought no frame rate (a 30 Hz power-saving cap, say), it is undone
+    // for good. Best windows are compared, because a stray hitch only ever makes a window look worse.
+    const playing = G.state === 'play' && !paused;
+    if (probeN > 0) {
+      if (playing) { probeBest = Math.max(probeBest, fps); if (--probeN === 0 && probeBest < probeFps * 1.15) { dprCap = probeCap; adaptOff = true; resize(); } }
+    } else if (!adaptOff && fps < 42 && playing) { lowFps++; lowBest = Math.max(lowBest, fps); }
+    else lowFps = lowBest = 0;
+    if (lowFps >= 4 && dprCap > 1) { probeFps = lowBest; probeCap = dprCap; dprCap = Math.max(1, dprCap - .5); lowFps = lowBest = 0; probeN = 4; probeBest = 0; resize(); }
   }
 
   readMove();
@@ -1925,7 +1992,7 @@ function frame(now) {
   if (simDt > 0 && G.state !== 'levelup') {
     const n = Math.min(8, Math.max(1, Math.ceil(simDt * 50)));         // sub-steps keep fast game speeds stable
     const h = simDt / n;
-    for (let i = 0; i < n; i++) step(h);
+    for (let i = 0; i < n; i++) step(h, i === n - 1 ? n : 0);
     updateParticles(simDt); updateRings(simDt); updateDmgNums(simDt);
   }
   G.xpShown += (G.xp / G.xpNeed - G.xpShown) * (1 - Math.exp(-14 * rdt));
