@@ -676,7 +676,7 @@ const UPG = [
     icon(g) { g.strokeStyle = this.color; g.lineWidth = 5; g.lineJoin = 'miter'; g.lineCap = 'round';
       g.beginPath(); g.moveTo(8, -21); g.lineTo(-8, -2); g.lineTo(5, 1); g.lineTo(-7, 21); g.stroke(); } },
   { id: 'overclock', name: 'Overclock', kind: 'passive', color: '#5fe3ff', max: 5,
-    desc: ['Weapons fire 18% faster, and Halo spins faster.', 'Weapons fire 36% faster, and Halo spins faster.', 'Weapons fire 54% faster, and Halo spins faster.', 'Weapons fire 72% faster, and Halo spins faster.', 'Weapons fire 90% faster, and Halo spins faster.'],
+    desc: ['Pulse, Shockwave and Spark fire 18% faster; Halo spins faster.', 'Pulse, Shockwave and Spark fire 36% faster; Halo spins faster.', 'Pulse, Shockwave and Spark fire 54% faster; Halo spins faster.', 'Pulse, Shockwave and Spark fire 72% faster; Halo spins faster.', 'Pulse, Shockwave and Spark fire 90% faster; Halo spins faster.'],
     icon(g) { g.fillStyle = this.color; for (let i = 0; i < 2; i++) { g.beginPath(); g.moveTo(-18 + i * 16, -15); g.lineTo(0 + i * 16, 0); g.lineTo(-18 + i * 16, 15); g.lineTo(-11 + i * 16, 0); g.closePath(); g.fill(); } } },
   { id: 'echo', name: 'Echo', kind: 'passive', color: '#f2fbff', max: 2,
     desc: ['+1 for EVERY weapon: an extra bolt, blade and ring, and Spark leaps 2 enemies farther.', 'Another +1 for every weapon, and Spark throws an extra chain.'],
@@ -824,6 +824,7 @@ function spawnRing() {
   const k = clamp(S.spawnRate, .25, 2);
   const n = Math.round(clamp(20 + G.diff / 8, 20, 70) * k);
   const rx = VW / 2 + 44, ry = VH / 2 + 44, gap = rnd(TAU), half = .6;       // a closing ring with one 70-degree way out...
+  if (enemies.length >= S.maxEnemies) return;                                // no room under the enemy cap: no ring, so no banner or bomb either
   for (let i = 0; i < n && enemies.length < S.maxEnemies; i++) {
     const a = gap + half + (i + .5) / n * (TAU - 2 * half);
     const k = 1 / Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a)));   // pushed out to the screen-edge rectangle, so nothing pops in on screen
@@ -983,7 +984,7 @@ function hurtEnemy(e, dmg, nx, ny, kb, noCrit) {
   G.dmgBy[SRC] = (G.dmgBy[SRC] || 0) + Math.min(dmg, e.hp * S.enemyHealth);
   e.hp -= dmg / S.enemyHealth;
   e.flash = .09;
-  if (kb) { const k = kb * (crit ? 2 : 1) * e.kb * S.knockback * kbScale(); e.kx += nx * k; e.ky += ny * k; }   // a critical hit shoves twice as hard
+  if (kb) { const k = kb * (crit && SRC !== 'wave' ? 2 : 1) * e.kb * S.knockback * kbScale(); e.kx += nx * k; e.ky += ny * k; }   // a critical hit shoves twice as hard (Shockwave already throws everything)
   if (S.dmgNumbers) {
     const n = e.dn;
     if (n && n.owner === e.uid && n.t < .25) { n.val += dmg; n.t = Math.min(n.t, .04); if (crit) { n.kind = DN_CRIT; n.sc = .34; } }   // rapid hits merge into one number
@@ -1992,7 +1993,10 @@ function frame(now) {
   if (simDt > 0 && G.state !== 'levelup') {
     const n = Math.min(8, Math.max(1, Math.ceil(simDt * 50)));         // sub-steps keep fast game speeds stable
     const h = simDt / n;
-    for (let i = 0; i < n; i++) step(h, i === n - 1 ? n : 0);
+    // Crowd separation is the costliest part of a step. Up to the default enemy cap it runs every sub-step;
+    // far above it (the Max on screen slider) it runs once per frame, scaled to stand in for all of them.
+    const lite = enemies.length > 700;
+    for (let i = 0; i < n; i++) step(h, lite ? (i === n - 1 ? n : 0) : 1);
     updateParticles(simDt); updateRings(simDt); updateDmgNums(simDt);
   }
   G.xpShown += (G.xp / G.xpNeed - G.xpShown) * (1 - Math.exp(-14 * rdt));
