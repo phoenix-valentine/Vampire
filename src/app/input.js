@@ -31,14 +31,13 @@ export function createInput(surface, options) {
   function setVector(dx, dy) {
     const len = Math.hypot(dx, dy);
     const dead = options.deadZone;
-    const max = options.maxRadius;
     if (len <= dead) {
       state.mx = 0;
       state.my = 0;
       return;
     }
-    const clamped = Math.min(len, max);
-    const amount = (clamped - dead) / (max - dead);
+    // Full speed comes well before the rim, so small thumb movements are enough.
+    const amount = Math.min(1, (len - dead) / (options.fullAt - dead));
     state.mx = (dx / len) * amount;
     state.my = (dy / len) * amount;
   }

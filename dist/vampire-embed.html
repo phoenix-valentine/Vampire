@@ -1,0 +1,2425 @@
+<title>Vampire: No Survivors</title>
+<style>
+/* One dark look on purpose: the game is a night scene. Every colour is a token. */
+:root {
+  --bg: #0b0a10;
+  --ground: #14131b;
+  --ink: #ece8e1;
+  --ink-dim: #9b96a3;
+  --blood: #c1121f;
+  --blood-bright: #ff3b47;
+  --danger: #ffb020;
+  --panel: #1b1924;
+  --panel-edge: #34303f;
+  --focus: #ffe9a8;
+  --tap: 48px;
+  --gutter: 16px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* On its own page the game owns the whole screen and the page must never scroll or bounce. */
+body.standalone {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  --inset-top: 0px;
+  --inset-right: 0px;
+  --inset-bottom: 0px;
+  --inset-left: 0px;
+}
+
+#stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#touch {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.layer > * {
+  pointer-events: auto;
+}
+
+/* Measures the notch and home bar. On its own page the game reads them from the browser;
+   inside a host page that already pads for them, they read as zero. */
+.inset-probe {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  padding: 0;
+}
+
+body.standalone .inset-probe {
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+#debug {
+  position: absolute;
+  left: calc(var(--inset-left) + 6px);
+  bottom: calc(var(--inset-bottom) + 4px);
+  font: 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--ink-dim);
+  opacity: 0.75;
+  pointer-events: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ---- The bars at the top ---- */
+.hud-top {
+  position: absolute;
+  left: calc(var(--inset-left) + 12px);
+  right: calc(var(--inset-right) + 8px);
+  top: calc(var(--inset-top) + 8px);
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.bars {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+}
+
+.bar {
+  position: relative;
+  height: 14px;
+  border-radius: 3px;
+  background: #2a0d12;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.bar > i {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-origin: left center;
+  background: var(--blood);
+}
+
+.bar.pulse > i {
+  background: var(--blood-bright);
+}
+
+.bar.low > i {
+  animation: low-blood 0.45s steps(2, jump-none) infinite;
+}
+
+@keyframes low-blood {
+  from {
+    background: var(--blood);
+  }
+  to {
+    background: var(--blood-bright);
+  }
+}
+
+.bar.level {
+  height: 5px;
+  background: #1f1d29;
+}
+
+.bar.level > i {
+  background: var(--ink);
+  opacity: 0.8;
+}
+
+.hud-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px #000;
+}
+
+.hud-row .warn {
+  color: var(--danger);
+}
+
+.btn-pause {
+  pointer-events: auto;
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(27, 25, 36, 0.7);
+  border: 1px solid var(--panel-edge);
+  border-radius: 10px;
+}
+
+.btn-pause span {
+  width: 5px;
+  height: 18px;
+  background: var(--ink);
+  border-radius: 1px;
+}
+
+.banner,
+.hint {
+  position: absolute;
+  left: calc(var(--inset-left) + 20px);
+  right: calc(var(--inset-right) + 20px);
+  text-align: center;
+  color: var(--ink);
+  text-shadow: 0 2px 3px #000, 0 0 12px #000;
+  opacity: 0;
+  transition: opacity 0.25s;
+  pointer-events: none;
+  text-wrap: balance;
+}
+
+.banner {
+  top: calc(var(--inset-top) + 96px);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.hint {
+  top: 62%;
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+.banner.on,
+.hint.on {
+  opacity: 1;
+}
+
+/* ---- Screens ---- */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: calc(var(--inset-top) + 28px);
+  padding-bottom: calc(var(--inset-bottom) + 20px);
+  padding-left: max(var(--gutter), calc(var(--inset-left) + var(--gutter)));
+  padding-right: max(var(--gutter), calc(var(--inset-right) + var(--gutter)));
+  background: rgba(9, 8, 13, 0.88);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  box-sizing: border-box;
+}
+
+.screen-cards {
+  background: rgba(9, 8, 13, 0.72);
+}
+
+.screen h1 {
+  margin: 0;
+  font-size: 54px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.screen h2 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.screen p {
+  margin: 0;
+}
+
+.screen .sub {
+  font-size: 17px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--blood-bright);
+}
+
+.screen .lead {
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--ink-dim);
+  max-width: 34ch;
+}
+
+.title-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6vh;
+  flex: 1;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stack.locked {
+  opacity: 0.55;
+}
+
+.btn {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 12px 16px;
+  box-sizing: border-box;
+  text-align: left;
+  font-size: 17px;
+  line-height: 1.3;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 12px;
+}
+
+.btn:active {
+  background: #262333;
+}
+
+.btn strong {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.btn strong em {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 15px;
+  color: var(--ink-dim);
+}
+
+.btn span {
+  color: var(--ink-dim);
+  font-size: 16px;
+}
+
+.btn.big {
+  min-height: 64px;
+  justify-content: center;
+  border-color: #5a2630;
+  background: #24141b;
+}
+
+.btn.big strong {
+  font-size: 21px;
+}
+
+.btn.card {
+  min-height: 72px;
+  justify-content: center;
+}
+
+.btn.small {
+  font-size: 15px;
+  color: var(--ink-dim);
+  background: transparent;
+}
+
+.foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+.version {
+  min-height: var(--tap);
+  min-width: var(--tap);
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.hits {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.stats dt {
+  color: var(--ink-dim);
+}
+
+.stats dd {
+  margin: 0;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.report {
+  width: 100%;
+  min-height: 150px;
+  box-sizing: border-box;
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--ink);
+  background: #0f0e15;
+  border: 1px solid var(--panel-edge);
+  border-radius: 8px;
+  padding: 8px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar.low > i {
+    animation: none;
+  }
+  .banner,
+  .hint {
+    transition: none;
+  }
+}
+
+</style>
+<div id="app" data-version="0.1.0">
+  <canvas id="stage" aria-label="Game"></canvas>
+  <div id="touch" aria-hidden="true"></div>
+  <div id="hud" class="layer"></div>
+  <div id="overlay" class="layer"></div>
+  <div id="debug" hidden></div>
+</div>
+
+<script>
+(() => {
+  // src/core/settings.js
+  var MODES = ["slaughter", "feed", "hunt"], SETTINGS = {
+    stepsPerSecond: 60,
+    arena: {
+      w: 900,
+      h: 1200,
+      gateWidth: 150
+    },
+    view: {
+      width: 360,
+      // world units across an upright phone
+      heightWide: 640,
+      // world units down on a wide screen
+      uprightAspect: 0.8,
+      playerScreenY: 0.46,
+      // the vampire sits a little above the middle, clear of the thumb
+      dprCap: 2
+    },
+    run: {
+      seconds: 180,
+      softStartSeconds: 45,
+      softStartDamage: 0.6
+    },
+    fair: {
+      minWarning: 0.3
+    },
+    player: {
+      radius: 11,
+      speed: 160,
+      accel: 18,
+      // how fast the vampire reaches the wanted speed; higher is snappier
+      startBlood: 70,
+      maxBlood: 100,
+      hitInvuln: 0.5,
+      hitCapShare: 0.3,
+      levelDamage: 0.1,
+      // claws grow this much per level
+      levelDamageCap: 12,
+      safeAfterCard: 0.6,
+      lowBlood: 0.3
+    },
+    claws: {
+      reach: 44,
+      arcDeg: 110,
+      interval: 0.7,
+      damage: 10,
+      knock: 170
+    },
+    blood: {
+      healPerUnit: 2.5,
+      dropLife: 14,
+      collectRadius: 16,
+      pullRadius: 34,
+      // shorter than the claws: the vampire has to step toward the dead to drink
+      pullSpeed: 110,
+      pullAccel: 1300,
+      popSpeed: 95,
+      popTime: 0.14,
+      dropKick: 12,
+      // how far along the blow the blood lands
+      drinkRadius: 115,
+      // Feed: how far the vampire can draw blood from bodies
+      drinkStillDelay: 0.12,
+      // Feed: how long the vampire must be still before blood flows
+      drinkRate: 7,
+      // Feed: units per second out of each body
+      poolLife: 14,
+      // Feed: how long a body keeps its blood
+      streamSpeed: 520
+    },
+    xp: {
+      first: 5,
+      step: 6
+      // level n needs first + step * (n - 1) units of blood
+    },
+    scaling: {
+      hpPer30s: 0.12,
+      damagePerMin: 0.25
+    },
+    humans: {
+      peasant: {
+        radius: 9,
+        hp: 10,
+        speed: 106,
+        walk: 46,
+        blood: 1,
+        reach: 16,
+        damage: 9,
+        windup: 0.32,
+        strikeSlack: 8,
+        recover: 0.45,
+        cooldown: 0.9,
+        sight: 140,
+        // Hunt: how close the vampire gets before a townsperson sees it
+        hear: 150,
+        // Hunt: how far a kill is noticed
+        fleeSpeed: 108
+      },
+      watchman: {
+        radius: 11,
+        hp: 32,
+        speed: 92,
+        walk: 60,
+        blood: 1,
+        reach: 20,
+        damage: 12,
+        windup: 0.4,
+        strikeSlack: 10,
+        recover: 0.5,
+        cooldown: 1.1
+      },
+      archer: {
+        radius: 9,
+        hp: 12,
+        speed: 78,
+        walk: 60,
+        blood: 2,
+        near: 150,
+        far: 225,
+        fireRange: 270,
+        aim: 0.75,
+        lockAt: 0.7,
+        // the aim line stops following the vampire after this share of the aim time
+        damage: 10,
+        shotSpeed: 300,
+        shotLife: 1.3,
+        shotRadius: 4,
+        cooldown: 2.6
+      }
+    },
+    limits: {
+      corpses: 90,
+      drops: 220,
+      humans: 110
+    },
+    modes: {
+      slaughter: {
+        label: "Slaughter",
+        line: "Cut them down. Walk into the blood.",
+        hint: "Drag to move. Walk into the blood.",
+        bloodRule: "drops",
+        healMul: 1,
+        hunger: 0,
+        hungerDelay: 0,
+        stages: "mob"
+      },
+      feed: {
+        label: "Feed",
+        line: "Stand still to drink. Move to live.",
+        hint: "Lift your thumb near the bodies to drink.",
+        bloodRule: "pools",
+        healMul: 1.6,
+        hunger: 1.6,
+        hungerDelay: 12,
+        clawsOnlyMoving: !0,
+        // Feed: moving is for killing, standing is for drinking
+        stages: "mob"
+      },
+      hunt: {
+        label: "Hunt",
+        line: "Let no one escape. Survivors bring the hunters.",
+        hint: "Run them down before they reach a gate.",
+        bloodRule: "bite",
+        healMul: 1.6,
+        hunger: 2.4,
+        hungerDelay: 6,
+        stages: "hunt",
+        hunterDelay: 4.5,
+        // seconds between an escape and the hunter it fetches
+        archerShare: 0.3,
+        archersFrom: 40,
+        alarmSteps: [5, 12, 20],
+        alarmSquads: [4, 6, 9],
+        alarmNames: ["THE BELL RINGS", "THE WATCH TURNS OUT", "THE WHOLE TOWN IS AWAKE"]
+      }
+    },
+    // Push, peak, breather. mix is the share of peasant, watchman, archer.
+    stages: {
+      mob: [
+        { until: 20, rate: 1.4, cap: 18, gates: 2, mix: [1, 0, 0] },
+        { until: 45, rate: 2.4, cap: 38, gates: 2, mix: [0.9, 0.1, 0] },
+        { until: 62, rate: 3.8, cap: 58, gates: 3, mix: [0.7, 0.1, 0.2], banner: "THE WATCH ARRIVES" },
+        { until: 74, rate: 0.7, cap: 58, gates: 1, mix: [1, 0, 0] },
+        { until: 108, rate: 3.6, cap: 78, gates: 3, mix: [0.65, 0.2, 0.15] },
+        { until: 128, rate: 5.4, cap: 100, gates: 4, mix: [0.7, 0.18, 0.12], banner: "THE MOB SURGES" },
+        { until: 140, rate: 0.9, cap: 100, gates: 2, mix: [0.8, 0.2, 0] },
+        { until: 180, rate: 6.4, cap: 110, gates: 4, mix: [0.6, 0.22, 0.18], banner: "THE WHOLE TOWN" }
+      ],
+      hunt: [
+        { until: 30, groupEvery: 5.5, groupSize: 4, patrolEvery: 0, patrol: [0, 0], cap: 26 },
+        { until: 70, groupEvery: 4.5, groupSize: 5, patrolEvery: 16, patrol: [1, 0], cap: 40, banner: "THE WATCH PATROLS" },
+        { until: 120, groupEvery: 3.8, groupSize: 6, patrolEvery: 12, patrol: [1, 1], cap: 60 },
+        { until: 180, groupEvery: 3, groupSize: 7, patrolEvery: 9, patrol: [2, 1], cap: 80, banner: "THE LAST HOUR BEFORE DAWN" }
+      ]
+    },
+    // Each power has three levels. text[n] says what level n + 1 gives.
+    powers: {
+      long: {
+        name: "Longer Claws",
+        max: 3,
+        reach: 0.3,
+        arc: 0.15,
+        text: ["Claws reach further and wider", "Claws reach further still", "Claws reach across a crowd"]
+      },
+      frenzy: {
+        name: "Frenzy",
+        max: 3,
+        interval: 0.82,
+        text: ["Claws swing faster", "Claws swing faster still", "Claws never rest"]
+      },
+      bats: {
+        name: "Bat Swarm",
+        max: 3,
+        count: [2, 3, 4],
+        radius: 58,
+        spin: 3.2,
+        damage: 6,
+        knock: 70,
+        gap: 0.45,
+        text: ["Two bats circle you and cut", "A third bat joins", "A fourth bat joins"]
+      },
+      lance: {
+        name: "Blood Lance",
+        max: 3,
+        interval: [1.4, 1.1, 0.85],
+        pierce: [2, 3, 4],
+        range: 240,
+        speed: 430,
+        damage: 12,
+        life: 0.7,
+        text: ["A shard of blood flies at the nearest human", "The shard flies more often", "The shard flies constantly"]
+      },
+      nova: {
+        name: "Blood Nova",
+        max: 3,
+        interval: [8, 6, 4.5],
+        radius: 92,
+        damage: 14,
+        knock: 260,
+        text: ["A burst around you every 8 seconds", "The burst comes every 6 seconds", "The burst comes every 4.5 seconds"]
+      },
+      gaze: {
+        name: "Hypnotic Gaze",
+        max: 3,
+        radius: [80, 105, 130],
+        slow: [0.3, 0.4, 0.5],
+        text: ["Humans near you move slower", "Your gaze reaches further", "Your gaze holds them"]
+      },
+      mist: {
+        name: "Mist Form",
+        max: 3,
+        duration: [0.7, 1, 1.3],
+        cooldown: [8, 7, 6],
+        text: ["A hit turns you to mist for a moment", "The mist lasts longer", "The mist lasts longer still"]
+      },
+      swift: {
+        name: "Swift",
+        max: 3,
+        speed: 0.09,
+        text: ["You move faster", "You move faster still", "Nothing outruns you"]
+      },
+      thick: {
+        name: "Thick Blood",
+        max: 3,
+        max_blood: 25,
+        text: ["Hold more blood, and gain some now", "Hold more blood, and gain some now", "Hold more blood, and gain some now"]
+      }
+    },
+    gorge: {
+      name: "Gorge",
+      text: "Hold a little more blood, and gain some now",
+      max_blood: 10
+    },
+    feel: {
+      gibOverkill: 0.6,
+      // a killing blow this far past the human's health tears the body apart
+      hitStopHurt: 0.09,
+      hitStopKillTough: 0.05,
+      hitStopLevel: 0.18,
+      shakeMax: 6,
+      shakeDecay: 2,
+      shakeHurt: 0.45,
+      shakeNova: 0.25,
+      particleCap: 300,
+      stainCap: 150,
+      stainLife: 22,
+      hintSeconds: 5,
+      bannerBase: 1.8,
+      bannerPerChar: 0.05,
+      cardLock: 0.4
+    },
+    input: {
+      deadZone: 7,
+      maxRadius: 50,
+      fullAt: 34,
+      tapMs: 220,
+      tapTravel: 12,
+      flickSpeed: 900
+    },
+    audio: {
+      master: 0.55,
+      maxVoices: 12
+    }
+  };
+
+  // src/core/rng.js
+  function createRng(seed) {
+    let a = seed >>> 0 || 1;
+    function next() {
+      a = a + 1831565813 >>> 0;
+      let t = a;
+      return t = Math.imul(t ^ t >>> 15, t | 1), t ^= t + Math.imul(t ^ t >>> 7, t | 61), ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+    return {
+      float: next,
+      range(lo, hi) {
+        return lo + (hi - lo) * next();
+      },
+      int(n) {
+        return Math.floor(next() * n);
+      },
+      chance(p) {
+        return next() < p;
+      },
+      sign() {
+        return next() < 0.5 ? -1 : 1;
+      },
+      angle() {
+        return next() * Math.PI * 2;
+      },
+      pick(list) {
+        return list[Math.floor(next() * list.length)];
+      },
+      shuffle(list) {
+        for (let i = list.length - 1; i > 0; i--) {
+          let j = Math.floor(next() * (i + 1)), tmp = list[i];
+          list[i] = list[j], list[j] = tmp;
+        }
+        return list;
+      },
+      getState() {
+        return a;
+      },
+      setState(value) {
+        a = value >>> 0;
+      }
+    };
+  }
+
+  // src/core/grid.js
+  function createGrid(cellSize) {
+    let cells = /* @__PURE__ */ new Map(), pool = [], used = [], inv = 1 / cellSize;
+    function key(cx, cy) {
+      return (cx + 32768) * 65536 + (cy + 32768);
+    }
+    function clear() {
+      for (let i = 0; i < used.length; i++) {
+        let bucket = used[i];
+        bucket.length = 0, pool.push(bucket);
+      }
+      used.length = 0, cells.clear();
+    }
+    function insert(item) {
+      let k = key(Math.floor(item.x * inv), Math.floor(item.y * inv)), bucket = cells.get(k);
+      bucket || (bucket = pool.pop() || [], cells.set(k, bucket), used.push(bucket)), bucket.push(item);
+    }
+    function query(x, y, radius, fn) {
+      let x0 = Math.floor((x - radius) * inv), x1 = Math.floor((x + radius) * inv), y0 = Math.floor((y - radius) * inv), y1 = Math.floor((y + radius) * inv);
+      for (let cy = y0; cy <= y1; cy++)
+        for (let cx = x0; cx <= x1; cx++) {
+          let bucket = cells.get(key(cx, cy));
+          if (bucket) {
+            for (let i = 0; i < bucket.length; i++)
+              if (fn(bucket[i]) === !0)
+                return !0;
+          }
+        }
+      return !1;
+    }
+    return { clear, insert, query, cellSize };
+  }
+
+  // src/core/rules.js
+  function emit(state, event) {
+    state.events.push(event);
+  }
+  function xpNeeded(level) {
+    return SETTINGS.xp.first + SETTINGS.xp.step * (level - 1);
+  }
+  function clawDamage(player) {
+    let levels = Math.min(player.level - 1, SETTINGS.player.levelDamageCap);
+    return SETTINGS.claws.damage * (1 + SETTINGS.player.levelDamage * levels);
+  }
+  function softStart(t) {
+    let share = Math.min(1, t / SETTINGS.run.softStartSeconds);
+    return SETTINGS.run.softStartDamage + (1 - SETTINGS.run.softStartDamage) * share;
+  }
+  function die(state, cause) {
+    state.over || (state.player.blood = 0, state.over = !0, state.result = "dead", state.cause = cause, emit(state, { type: "dead", x: state.player.x, y: state.player.y, cause }));
+  }
+  function drink(state, units, x, y) {
+    let p = state.player, mode = SETTINGS.modes[state.mode];
+    for (p.blood = Math.min(p.maxBlood, p.blood + units * SETTINGS.blood.healPerUnit * mode.healMul), p.xp += units, state.stats.drunk += units, emit(state, { type: "pickup", x, y, units }); p.xp >= xpNeeded(p.level); )
+      p.xp -= xpNeeded(p.level), p.level++, state.pendingLevels++, state.stats.firstLevelT < 0 && (state.stats.firstLevelT = state.t);
+  }
+  function hurtPlayer(state, amount, source, warnedFor, x, y) {
+    let p = state.player;
+    if (state.over || p.invuln > 0 || p.mistT > 0)
+      return !1;
+    let dmg = amount * softStart(state.t), cap = p.maxBlood * SETTINGS.player.hitCapShare;
+    dmg > cap && (dmg = cap), warnedFor < SETTINGS.fair.minWarning && state.stats.violations++, p.blood -= dmg, p.invuln = SETTINGS.player.hitInvuln, state.stats.hitsTaken++, state.stats.damageBy[source] = (state.stats.damageBy[source] || 0) + dmg, state.recentHits.push({ t: state.t, source, dmg, warnedFor }), state.recentHits.length > 6 && state.recentHits.shift(), emit(state, { type: "hurt", x: p.x, y: p.y, fromX: x, fromY: y, dmg, source });
+    let mistLevel = p.powers.mist || 0;
+    return mistLevel > 0 && p.mistCd <= 0 && p.blood > 0 && (p.mistT = SETTINGS.powers.mist.duration[mistLevel - 1], p.mistCd = SETTINGS.powers.mist.cooldown[mistLevel - 1], emit(state, { type: "mist", x: p.x, y: p.y })), p.blood <= 0 && die(state, source), !0;
+  }
+  function spawnDrop(state, x, y, streaming) {
+    state.drops.length >= SETTINGS.limits.drops && state.drops.shift();
+    let a = state.rng.angle(), speed = streaming ? 0 : SETTINGS.blood.popSpeed * (0.5 + state.rng.float());
+    state.drops.push({
+      x,
+      y,
+      px: x,
+      py: y,
+      vx: Math.cos(a) * speed,
+      vy: Math.sin(a) * speed,
+      age: 0,
+      pulled: streaming,
+      pullT: 0,
+      stream: streaming,
+      value: 1
+    });
+  }
+  function killHuman(state, h, dirX, dirY, gib, source) {
+    if (h.dead)
+      return;
+    h.dead = !0;
+    let def = SETTINGS.humans[h.type], stats = state.stats;
+    stats.kills++, stats.killsBy[h.type] = (stats.killsBy[h.type] || 0) + 1, stats.firstKillT < 0 && (stats.firstKillT = state.t);
+    let rule = SETTINGS.modes[state.mode].bloodRule, corpse = { x: h.x, y: h.y, type: h.type, r: h.r, age: 0, dirX, dirY, blood: 0, drain: 0, gib };
+    if (rule === "drops")
+      for (let i = 0; i < def.blood; i++)
+        spawnDrop(state, h.x + dirX * SETTINGS.blood.dropKick, h.y + dirY * SETTINGS.blood.dropKick, !1);
+    else rule === "pools" ? corpse.blood = def.blood : (drink(state, def.blood, h.x, h.y), emit(state, { type: "bite", x: h.x, y: h.y }));
+    state.corpses.push(corpse), state.corpses.length > SETTINGS.limits.corpses && state.corpses.shift(), state.mode === "hunt" && state.scares.push({ x: h.x, y: h.y }), emit(state, { type: "kill", x: h.x, y: h.y, dirX, dirY, human: h.type, gib, source, tough: h.type !== "peasant" });
+  }
+  function damageHuman(state, h, dmg, dirX, dirY, knock, source) {
+    if (!h.dead)
+      if (h.hp -= dmg, h.flash = 0.08, h.kx += dirX * knock, h.ky += dirY * knock, h.hp <= 0) {
+        let gib = -h.hp >= h.maxHp * SETTINGS.feel.gibOverkill;
+        killHuman(state, h, dirX, dirY, gib, source);
+      } else
+        emit(state, { type: "hit", x: h.x, y: h.y, dirX, dirY, human: h.type, source });
+  }
+
+  // src/core/humans.js
+  var W = SETTINGS.arena.w, H = SETTINGS.arena.h, HALF_GATE = SETTINGS.arena.gateWidth / 2, GATES = [
+    { x: W / 2, y: 0, nx: 0, ny: -1 },
+    { x: W, y: H / 2, nx: 1, ny: 0 },
+    { x: W / 2, y: H, nx: 0, ny: 1 },
+    { x: 0, y: H / 2, nx: -1, ny: 0 }
+  ], nextId = 1;
+  function resetIds() {
+    nextId = 1;
+  }
+  function makeHuman(state, type, role, x, y) {
+    let def = SETTINGS.humans[type], hp = def.hp * (1 + SETTINGS.scaling.hpPer30s * (state.t / 30));
+    return {
+      id: nextId++,
+      type,
+      role,
+      x,
+      y,
+      px: x,
+      py: y,
+      vx: 0,
+      vy: 0,
+      kx: 0,
+      ky: 0,
+      r: def.radius,
+      hp,
+      maxHp: hp,
+      ai: "approach",
+      aiT: 0,
+      cd: 0.3 + state.rng.float() * 0.5,
+      flash: 0,
+      batCd: 0,
+      tx: x,
+      ty: y,
+      ax: 0,
+      ay: 0,
+      locked: !1,
+      witness: !1,
+      gate: -1,
+      dest: -1,
+      repick: 0,
+      dead: !1,
+      gone: !1,
+      side: state.rng.sign()
+    };
+  }
+  function spawnAtGate(state, type, role, gateIndex, destGate) {
+    if (state.humans.length >= SETTINGS.limits.humans)
+      return null;
+    let g = GATES[gateIndex], out = 30 + state.rng.float() * 70, along = (state.rng.float() - 0.5) * (SETTINGS.arena.gateWidth - 36), tx = -g.ny, ty = g.nx, h = makeHuman(state, type, role, g.x + g.nx * out + tx * along, g.y + g.ny * out + ty * along), inward = 40 + state.rng.float() * 70;
+    return h.ai = "enter", h.tx = g.x - g.nx * inward + tx * along, h.ty = g.y - g.ny * inward + ty * along, h.gate = gateIndex, h.dest = destGate === void 0 ? -1 : destGate, state.humans.push(h), h;
+  }
+  function spawnInside(state, type, role, x, y, destGate) {
+    let h = makeHuman(state, type, role, x, y);
+    return h.ai = role === "prey" ? "walk" : role === "ranged" ? "reposition" : "approach", h.dest = destGate === void 0 ? -1 : destGate, role === "prey" && (h.tx = GATES[h.dest].x, h.ty = GATES[h.dest].y), state.humans.push(h), h;
+  }
+  function becomeWitness(state, h) {
+    h.witness || (h.witness = !0, h.ai = "flee", h.repick = 0, emit(state, { type: "scream", x: h.x, y: h.y }));
+  }
+  function pickEscapeGate(state, h) {
+    let p = state.player, best = 0, bestScore = 1e9;
+    for (let i = 0; i < GATES.length; i++) {
+      let g = GATES[i], dx = g.x - h.x, dy = g.y - h.y, dg = Math.hypot(dx, dy) || 1, pdx = p.x - h.x, pdy = p.y - h.y, dp = Math.hypot(pdx, pdy) || 1, score = dg - 0.5 * Math.min(Math.hypot(g.x - p.x, g.y - p.y), 400);
+      (dx * pdx + dy * pdy) / (dg * dp) > 0.7 && dp < dg && (score += 350), score < bestScore && (bestScore = score, best = i);
+    }
+    return best;
+  }
+  function constrain(h) {
+    let r = h.r, inGateX = Math.abs(h.x - W / 2) < HALF_GATE - r, inGateY = Math.abs(h.y - H / 2) < HALF_GATE - r;
+    h.y < r ? inGateX || h.y < -r ? h.y < 0 && (h.x = Math.max(W / 2 - HALF_GATE + r, Math.min(W / 2 + HALF_GATE - r, h.x))) : h.y = r : h.y > H - r && (inGateX || h.y > H + r ? h.y > H && (h.x = Math.max(W / 2 - HALF_GATE + r, Math.min(W / 2 + HALF_GATE - r, h.x))) : h.y = H - r), h.x < r ? inGateY || h.x < -r ? h.x < 0 && (h.y = Math.max(H / 2 - HALF_GATE + r, Math.min(H / 2 + HALF_GATE - r, h.y))) : h.x = r : h.x > W - r && (inGateY || h.x > W + r ? h.x > W && (h.y = Math.max(H / 2 - HALF_GATE + r, Math.min(H / 2 + HALF_GATE - r, h.y))) : h.x = W - r);
+  }
+  function updateHumans(state, dt, grid) {
+    let p = state.player, humans = state.humans, dmgScale = 1 + SETTINGS.scaling.damagePerMin * (state.t / 60), gazeLevel = p.powers.gaze || 0, gazeRadius = gazeLevel > 0 ? SETTINGS.powers.gaze.radius[gazeLevel - 1] : 0, gazeSlow = gazeLevel > 0 ? SETTINGS.powers.gaze.slow[gazeLevel - 1] : 0, scares = state.scares, hearSq = SETTINGS.humans.peasant.hear * SETTINGS.humans.peasant.hear;
+    for (let i = 0; i < humans.length; i++) {
+      let h = humans[i];
+      if (h.dead || h.gone)
+        continue;
+      let def = SETTINGS.humans[h.type];
+      h.px = h.x, h.py = h.y, h.flash > 0 && (h.flash -= dt), h.batCd > 0 && (h.batCd -= dt), h.cd > 0 && (h.cd -= dt);
+      let dxp = p.x - h.x, dyp = p.y - h.y, dist = Math.hypot(dxp, dyp) || 1e-3, slow = gazeRadius > 0 && dist < gazeRadius ? 1 - gazeSlow : 1, wantX = 0, wantY = 0;
+      if (h.ai === "enter") {
+        let dx = h.tx - h.x, dy = h.ty - h.y, d = Math.hypot(dx, dy) || 1e-3, speed = (h.role === "prey" ? def.walk : def.speed) * slow;
+        wantX = dx / d * speed, wantY = dy / d * speed, d < 12 && (h.role === "prey" ? (h.ai = "walk", h.tx = GATES[h.dest].x, h.ty = GATES[h.dest].y) : h.role === "ranged" ? h.ai = "reposition" : h.ai = "approach");
+      } else if (h.ai === "approach") {
+        let strikeStart = def.reach + h.r + p.radius;
+        dist < strikeStart && h.cd <= 0 && p.mistT <= 0 ? (h.ai = "windup", h.aiT = def.windup, emit(state, { type: "windup", x: h.x, y: h.y, id: h.id })) : (wantX = dxp / dist * def.speed * slow, wantY = dyp / dist * def.speed * slow);
+      } else if (h.ai === "windup") {
+        if (h.aiT -= dt, h.aiT <= 0) {
+          let strikeRange = def.reach + h.r + p.radius + def.strikeSlack, landed = dist < strikeRange && hurtPlayer(state, def.damage * dmgScale, h.type, def.windup, h.x, h.y);
+          emit(state, { type: "strike", x: h.x, y: h.y, landed }), h.ai = "recover", h.aiT = def.recover, h.cd = def.cooldown;
+        }
+      } else if (h.ai === "recover")
+        h.aiT -= dt, h.aiT <= 0 && (h.ai = "approach");
+      else if (h.ai === "reposition") {
+        dist < def.near ? (wantX = -dxp / dist * def.speed * slow, wantY = -dyp / dist * def.speed * slow) : dist > def.far ? (wantX = dxp / dist * def.speed * slow, wantY = dyp / dist * def.speed * slow) : (wantX = -dyp / dist * def.speed * 0.45 * h.side * slow, wantY = dxp / dist * def.speed * 0.45 * h.side * slow);
+        let inside = h.x > 20 && h.x < W - 20 && h.y > 20 && h.y < H - 20;
+        h.cd <= 0 && dist < def.fireRange && inside && p.mistT <= 0 && (h.ai = "aim", h.aiT = def.aim, h.ax = dxp / dist, h.ay = dyp / dist, h.locked = !1, emit(state, { type: "aim", x: h.x, y: h.y, id: h.id }));
+      } else if (h.ai === "aim")
+        h.aiT -= dt, h.aiT > def.aim * (1 - def.lockAt) ? (h.ax = dxp / dist, h.ay = dyp / dist) : h.locked || (h.locked = !0, emit(state, { type: "lock", x: h.x, y: h.y, id: h.id })), h.aiT <= 0 && (state.shots.push({
+          x: h.x + h.ax * h.r,
+          y: h.y + h.ay * h.r,
+          px: h.x,
+          py: h.y,
+          vx: h.ax * def.shotSpeed,
+          vy: h.ay * def.shotSpeed,
+          dmg: def.damage * dmgScale,
+          life: def.shotLife,
+          warned: def.aim,
+          source: h.type
+        }), emit(state, { type: "arrow", x: h.x, y: h.y }), h.cd = def.cooldown, h.ai = "reposition");
+      else if (h.ai === "walk") {
+        let dx = h.tx - h.x, dy = h.ty - h.y, d = Math.hypot(dx, dy) || 1e-3;
+        if (wantX = dx / d * def.walk * slow, wantY = dy / d * def.walk * slow, dist < def.sight && p.mistT <= 0)
+          becomeWitness(state, h);
+        else
+          for (let s = 0; s < scares.length; s++) {
+            let sx = scares[s].x - h.x, sy = scares[s].y - h.y;
+            if (sx * sx + sy * sy < hearSq) {
+              becomeWitness(state, h);
+              break;
+            }
+          }
+        h.ai === "walk" && d < 26 && (h.ai = "leave", h.gate = h.dest);
+      } else if (h.ai === "flee") {
+        h.repick -= dt, h.repick <= 0 && (h.gate = pickEscapeGate(state, h), h.repick = 0.7);
+        let g = GATES[h.gate], gx = g.x - h.x, gy = g.y - h.y, gd = Math.hypot(gx, gy) || 1e-3, away = Math.max(0, (120 - dist) / 120) * 1.5, fx = gx / gd - dxp / dist * away, fy = gy / gd - dyp / dist * away, fl = Math.hypot(fx, fy) || 1e-3;
+        fx /= fl, fy /= fl, wantX = fx * def.fleeSpeed * slow, wantY = fy * def.fleeSpeed * slow, gd < 26 && (h.ai = "leave");
+      } else if (h.ai === "leave") {
+        let g = GATES[h.gate], speed = (h.witness ? def.fleeSpeed : def.walk) * slow;
+        if (wantX = g.nx * speed, wantY = g.ny * speed, (h.x - g.x) * g.nx + (h.y - g.y) * g.ny > 34) {
+          h.gone = !0, h.witness ? (state.stats.escapes++, state.alarm.pending.push({ at: state.t + SETTINGS.modes.hunt.hunterDelay, gate: h.gate }), emit(state, { type: "escape", x: g.x, y: g.y, gate: h.gate })) : state.stats.passed++;
+          continue;
+        }
+      }
+      let k = Math.min(1, 9 * dt);
+      h.vx += (wantX - h.vx) * k, h.vy += (wantY - h.vy) * k, h.x += (h.vx + h.kx) * dt, h.y += (h.vy + h.ky) * dt;
+      let decay = Math.max(0, 1 - 7 * dt);
+      if (h.kx *= decay, h.ky *= decay, grid.query(h.x, h.y, h.r + 12, (o) => {
+        if (o === h || o.dead || o.gone)
+          return;
+        let dx = h.x - o.x, dy = h.y - o.y, d = Math.hypot(dx, dy), min = h.r + o.r;
+        if (d < min && d > 0.01) {
+          let push = (min - d) * 0.35;
+          h.x += dx / d * push, h.y += dy / d * push;
+        }
+      }), p.mistT <= 0) {
+        let dx = h.x - p.x, dy = h.y - p.y, d = Math.hypot(dx, dy), min = h.r + p.radius - 2;
+        d < min && d > 0.01 && (h.x = p.x + dx / d * min, h.y = p.y + dy / d * min);
+      }
+      constrain(h);
+    }
+    scares.length = 0;
+  }
+  function updateShots(state, dt) {
+    let p = state.player, shots = state.shots;
+    for (let i = shots.length - 1; i >= 0; i--) {
+      let s = shots[i];
+      s.px = s.x, s.py = s.y, s.x += s.vx * dt, s.y += s.vy * dt, s.life -= dt;
+      let dx = s.x - p.x, dy = s.y - p.y, hitR = p.radius + SETTINGS.humans.archer.shotRadius - 2, remove = s.life <= 0;
+      !remove && dx * dx + dy * dy < hitR * hitR && p.mistT <= 0 && p.invuln <= 0 && (hurtPlayer(state, s.dmg, s.source, s.warned, s.x - s.vx * 0.05, s.y - s.vy * 0.05), remove = !0), remove && (shots[i] = shots[shots.length - 1], shots.pop());
+    }
+  }
+
+  // src/core/director.js
+  var TYPES = ["peasant", "watchman", "archer"];
+  function roleOf(type) {
+    return type === "archer" ? "ranged" : "rush";
+  }
+  function pickType(state, mix) {
+    let roll = state.rng.float() * (mix[0] + mix[1] + mix[2]);
+    return roll < mix[0] ? TYPES[0] : roll < mix[0] + mix[1] ? TYPES[1] : TYPES[2];
+  }
+  function clampInside(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+  function initDirector(state) {
+    let table = SETTINGS.modes[state.mode].stages;
+    state.dir = {
+      table,
+      stage: -1,
+      budget: 0,
+      gates: [0],
+      groupT: 1.5,
+      patrolT: 0,
+      alarmStep: 0
+    };
+    let p = state.player;
+    if (table === "mob")
+      for (let i = 0; i < 3; i++) {
+        let a = -Math.PI / 2 + (i - 1) * 0.9 + (state.rng.float() - 0.5) * 0.3, d = 130 + i * 28;
+        spawnInside(state, "peasant", "rush", p.x + Math.cos(a) * d, p.y + Math.sin(a) * d);
+      }
+    else
+      for (let i = 0; i < 6; i++) {
+        let x = clampInside(p.x - 90 + i * 36, 40, SETTINGS.arena.w - 40), y = clampInside(p.y - 175 - i % 2 * 22, 40, SETTINGS.arena.h - 40);
+        spawnInside(state, "peasant", "prey", x, y, 0);
+      }
+  }
+  function enterStage(state, index) {
+    let dir = state.dir, stage = SETTINGS.stages[dir.table][index];
+    if (dir.stage = index, dir.table === "mob") {
+      let order = state.rng.shuffle([0, 1, 2, 3]);
+      dir.gates = order.slice(0, stage.gates);
+    }
+    emit(state, { type: "stage", index, banner: stage.banner || null, gates: dir.gates.slice() });
+  }
+  function spawnHunter(state, gate) {
+    let mode = SETTINGS.modes.hunt, type = state.t >= mode.archersFrom && state.rng.chance(mode.archerShare) ? "archer" : "watchman";
+    spawnAtGate(state, type, roleOf(type), gate);
+  }
+  function updateDirector(state, dt) {
+    let dir = state.dir, stages = SETTINGS.stages[dir.table], index = 0;
+    for (; index < stages.length - 1 && state.t >= stages[index].until; )
+      index++;
+    index !== dir.stage && enterStage(state, index);
+    let stage = stages[index], alive = state.humans.length;
+    if (alive > state.stats.peakHumans && (state.stats.peakHumans = alive), dir.table === "mob") {
+      for (dir.budget += stage.rate * dt; dir.budget >= 1; )
+        if (dir.budget -= 1, state.humans.length < stage.cap) {
+          let type = pickType(state, stage.mix);
+          spawnAtGate(state, type, roleOf(type), state.rng.pick(dir.gates));
+        }
+      return;
+    }
+    if (dir.groupT -= dt, dir.groupT <= 0 && (dir.groupT = stage.groupEvery, state.humans.length + stage.groupSize <= stage.cap)) {
+      let from = state.rng.int(4), to = (from + 1 + state.rng.int(3)) % 4;
+      for (let i = 0; i < stage.groupSize; i++)
+        spawnAtGate(state, "peasant", "prey", from, to);
+      emit(state, { type: "group", gate: from, x: GATES[from].x, y: GATES[from].y });
+    }
+    if (stage.patrolEvery > 0 && (dir.patrolT -= dt, dir.patrolT <= 0)) {
+      dir.patrolT = stage.patrolEvery;
+      let gate = state.rng.int(4);
+      for (let i = 0; i < stage.patrol[0]; i++)
+        spawnAtGate(state, "watchman", "rush", gate);
+      for (let i = 0; i < stage.patrol[1]; i++)
+        spawnAtGate(state, "archer", "ranged", gate);
+    }
+    let pending = state.alarm.pending;
+    for (let i = pending.length - 1; i >= 0; i--)
+      if (state.t >= pending[i].at) {
+        for (let n = 0; n <= dir.alarmStep; n++)
+          spawnHunter(state, pending[i].gate);
+        emit(state, { type: "hunter", gate: pending[i].gate, x: GATES[pending[i].gate].x, y: GATES[pending[i].gate].y }), pending.splice(i, 1);
+      }
+    let mode = SETTINGS.modes.hunt;
+    if (dir.alarmStep < mode.alarmSteps.length && state.stats.escapes >= mode.alarmSteps[dir.alarmStep]) {
+      let gate = state.rng.int(4);
+      for (let i = 0; i < mode.alarmSquads[dir.alarmStep]; i++)
+        spawnHunter(state, gate);
+      emit(state, { type: "alarm", level: dir.alarmStep + 1, banner: mode.alarmNames[dir.alarmStep], gate }), dir.alarmStep++;
+    }
+  }
+
+  // src/core/powers.js
+  function powerLevel(player, id) {
+    return player.powers[id] || 0;
+  }
+  function makeOffer(state) {
+    let p = state.player, eligible = [], ids = Object.keys(SETTINGS.powers);
+    for (let i = 0; i < ids.length; i++)
+      powerLevel(p, ids[i]) < SETTINGS.powers[ids[i]].max && eligible.push(ids[i]);
+    state.rng.shuffle(eligible);
+    let cards = [];
+    for (let i = 0; i < eligible.length && cards.length < 3; i++) {
+      let id = eligible[i], level = powerLevel(p, id) + 1;
+      cards.push({ id, level, name: SETTINGS.powers[id].name, text: SETTINGS.powers[id].text[level - 1] });
+    }
+    for (; cards.length < 3; )
+      cards.push({ id: "gorge", level: 1, name: SETTINGS.gorge.name, text: SETTINGS.gorge.text });
+    return cards;
+  }
+  function applyPower(state, id) {
+    let p = state.player;
+    if (id === "gorge") {
+      p.maxBlood += SETTINGS.gorge.max_blood, p.blood = Math.min(p.maxBlood, p.blood + SETTINGS.gorge.max_blood);
+      return;
+    }
+    p.powers[id] = powerLevel(p, id) + 1;
+    let level = p.powers[id];
+    id === "long" ? (p.reachMul = 1 + SETTINGS.powers.long.reach * level, p.arcMul = 1 + SETTINGS.powers.long.arc * level) : id === "frenzy" ? p.intervalMul = Math.pow(SETTINGS.powers.frenzy.interval, level) : id === "swift" ? p.speedMul = 1 + SETTINGS.powers.swift.speed * level : id === "thick" ? (p.maxBlood += SETTINGS.powers.thick.max_blood, p.blood = Math.min(p.maxBlood, p.blood + SETTINGS.powers.thick.max_blood)) : id === "lance" ? p.lanceCd = 0.2 : id === "nova" && (p.novaCd = 1.5);
+  }
+  function updatePowers(state, dt, grid) {
+    let p = state.player, bats = powerLevel(p, "bats");
+    if (bats > 0) {
+      let def = SETTINGS.powers.bats, count = def.count[bats - 1];
+      p.batAngle += def.spin * dt;
+      for (let i = 0; i < count; i++) {
+        let a = p.batAngle + i * Math.PI * 2 / count, bx = p.x + Math.cos(a) * def.radius, by = p.y + Math.sin(a) * def.radius;
+        grid.query(bx, by, 22, (h) => {
+          if (h.dead || h.gone || h.batCd > 0)
+            return;
+          let dx = h.x - bx, dy = h.y - by;
+          if ((Math.hypot(dx, dy) || 1e-3) < 9 + h.r) {
+            h.batCd = def.gap;
+            let ox = h.x - p.x, oy = h.y - p.y, od = Math.hypot(ox, oy) || 1e-3;
+            damageHuman(state, h, def.damage, ox / od, oy / od, def.knock, "bats");
+          }
+        });
+      }
+    }
+    let lance = powerLevel(p, "lance");
+    if (lance > 0) {
+      let def = SETTINGS.powers.lance;
+      if (p.lanceCd -= dt, p.lanceCd <= 0) {
+        let best = null, bestD = def.range;
+        if (grid.query(p.x, p.y, def.range, (h) => {
+          if (h.dead || h.gone)
+            return;
+          let d = Math.hypot(h.x - p.x, h.y - p.y);
+          d < bestD && (bestD = d, best = h);
+        }), best) {
+          let dx = (best.x - p.x) / (bestD || 1), dy = (best.y - p.y) / (bestD || 1);
+          state.bolts.push({
+            x: p.x,
+            y: p.y,
+            px: p.x,
+            py: p.y,
+            vx: dx * def.speed,
+            vy: dy * def.speed,
+            life: def.life,
+            pierce: def.pierce[lance - 1],
+            hit: []
+          }), p.lanceCd = def.interval[lance - 1], emit(state, { type: "lance", x: p.x, y: p.y });
+        } else
+          p.lanceCd = 0.15;
+      }
+    }
+    let bolts = state.bolts;
+    for (let i = bolts.length - 1; i >= 0; i--) {
+      let b = bolts[i];
+      b.px = b.x, b.py = b.y, b.x += b.vx * dt, b.y += b.vy * dt, b.life -= dt;
+      let speed = Math.hypot(b.vx, b.vy) || 1;
+      grid.query(b.x, b.y, 20, (h) => {
+        if (h.dead || h.gone || b.pierce < 0 || b.hit.indexOf(h.id) >= 0)
+          return;
+        Math.hypot(h.x - b.x, h.y - b.y) < 6 + h.r && (b.hit.push(h.id), b.pierce--, damageHuman(state, h, SETTINGS.powers.lance.damage, b.vx / speed, b.vy / speed, 90, "lance"));
+      }), (b.life <= 0 || b.pierce < 0) && (bolts[i] = bolts[bolts.length - 1], bolts.pop());
+    }
+    let nova = powerLevel(p, "nova");
+    if (nova > 0) {
+      let def = SETTINGS.powers.nova;
+      if (p.novaCd -= dt, p.novaCd <= 0) {
+        let any = !1;
+        grid.query(p.x, p.y, def.radius, (h) => {
+          if (h.dead || h.gone)
+            return;
+          let dx = h.x - p.x, dy = h.y - p.y, d = Math.hypot(dx, dy) || 1e-3;
+          d < def.radius + h.r && (any = !0, damageHuman(state, h, def.damage, dx / d, dy / d, def.knock, "nova"));
+        }), any ? (p.novaCd = def.interval[nova - 1], emit(state, { type: "nova", x: p.x, y: p.y, radius: def.radius })) : p.novaCd = 0.2;
+      }
+    }
+  }
+
+  // src/core/sim.js
+  var DT = 1 / SETTINGS.stepsPerSecond;
+  function createSim(mode, seed) {
+    resetIds();
+    let state = {
+      mode,
+      seed,
+      rng: createRng(seed),
+      grid: createGrid(48),
+      t: 0,
+      steps: 0,
+      over: !1,
+      result: null,
+      cause: null,
+      player: {
+        x: SETTINGS.arena.w / 2,
+        y: SETTINGS.arena.h / 2,
+        px: SETTINGS.arena.w / 2,
+        py: SETTINGS.arena.h / 2,
+        vx: 0,
+        vy: 0,
+        fx: 0,
+        fy: -1,
+        radius: SETTINGS.player.radius,
+        blood: SETTINGS.player.startBlood,
+        maxBlood: SETTINGS.player.maxBlood,
+        level: 1,
+        xp: 0,
+        invuln: 0,
+        still: 0,
+        swipeCd: 0.2,
+        swipeAng: 0,
+        swipeT: 1,
+        mistT: 0,
+        mistCd: 0,
+        batAngle: 0,
+        lanceCd: 0,
+        novaCd: 0,
+        reachMul: 1,
+        arcMul: 1,
+        intervalMul: 1,
+        speedMul: 1,
+        drinking: !1,
+        powers: {}
+      },
+      humans: [],
+      corpses: [],
+      drops: [],
+      shots: [],
+      bolts: [],
+      scares: [],
+      alarm: { pending: [] },
+      dir: null,
+      pendingLevels: 0,
+      offer: null,
+      events: [],
+      recentHits: [],
+      stats: {
+        kills: 0,
+        killsBy: {},
+        escapes: 0,
+        passed: 0,
+        drunk: 0,
+        hitsTaken: 0,
+        damageBy: {},
+        violations: 0,
+        firstKillT: -1,
+        firstLevelT: -1,
+        peakHumans: 0,
+        lowBloodTime: 0,
+        cards: []
+      }
+    };
+    return initDirector(state), state;
+  }
+  function updatePlayer(state, input) {
+    let p = state.player;
+    p.px = p.x, p.py = p.y;
+    let mx = input.mx, my = input.my, len = Math.hypot(mx, my);
+    len > 1 && (mx /= len, my /= len);
+    let speed = SETTINGS.player.speed * p.speedMul, k = Math.min(1, SETTINGS.player.accel * DT);
+    p.vx += (mx * speed - p.vx) * k, p.vy += (my * speed - p.vy) * k, p.x += p.vx * DT, p.y += p.vy * DT;
+    let r = p.radius;
+    p.x = Math.max(r, Math.min(SETTINGS.arena.w - r, p.x)), p.y = Math.max(r, Math.min(SETTINGS.arena.h - r, p.y)), len > 0.1 ? (p.fx = mx / len, p.fy = my / len, p.still = 0) : p.still += DT, p.invuln > 0 && (p.invuln -= DT), p.mistT > 0 && (p.mistT -= DT), p.mistCd > 0 && (p.mistCd -= DT), p.swipeT += DT;
+  }
+  function updateHunger(state) {
+    let p = state.player, mode = SETTINGS.modes[state.mode];
+    mode.hunger > 0 && state.t > mode.hungerDelay && (p.blood -= mode.hunger * DT, p.blood <= 0 && die(state, "hunger")), p.blood < p.maxBlood * SETTINGS.player.lowBlood && (state.stats.lowBloodTime += DT);
+  }
+  function updateClaws(state) {
+    let p = state.player;
+    if (p.swipeCd -= DT, p.swipeCd > 0 || SETTINGS.modes[state.mode].clawsOnlyMoving && p.still > 0.1)
+      return;
+    let reach = SETTINGS.claws.reach * p.reachMul, best = null, bestD = 1e9;
+    if (state.grid.query(p.x, p.y, reach + 16, (h) => {
+      if (h.dead || h.gone)
+        return;
+      let d = Math.hypot(h.x - p.x, h.y - p.y) - h.r;
+      d < reach && d < bestD && (bestD = d, best = h);
+    }), !best)
+      return;
+    let ang = Math.atan2(best.y - p.y, best.x - p.x), half = Math.min(Math.PI, SETTINGS.claws.arcDeg * p.arcMul * Math.PI / 180 / 2), dmg = clawDamage(p), hits = 0;
+    state.grid.query(p.x, p.y, reach + 16, (h) => {
+      if (h.dead || h.gone)
+        return;
+      let dx = h.x - p.x, dy = h.y - p.y, d = Math.hypot(dx, dy) || 1e-3;
+      if (d - h.r > reach)
+        return;
+      let da = Math.atan2(dy, dx) - ang;
+      for (; da > Math.PI; )
+        da -= Math.PI * 2;
+      for (; da < -Math.PI; )
+        da += Math.PI * 2;
+      Math.abs(da) > half || (hits++, damageHuman(state, h, dmg, dx / d, dy / d, SETTINGS.claws.knock, "claws"));
+    }), p.swipeCd = SETTINGS.claws.interval * p.intervalMul, p.swipeAng = ang, p.swipeT = 0, emit(state, { type: "swipe", x: p.x, y: p.y, ang, reach, half, hits });
+  }
+  function updateBlood(state) {
+    let p = state.player, B = SETTINGS.blood, rule = SETTINGS.modes[state.mode].bloodRule;
+    if (p.drinking = !1, rule === "pools") {
+      let still = p.still >= B.drinkStillDelay && p.mistT <= 0, corpses = state.corpses;
+      for (let i = 0; i < corpses.length; i++) {
+        let c = corpses[i];
+        if (c.blood <= 0)
+          continue;
+        if (c.age > B.poolLife) {
+          c.blood = 0, state.stats.wasted = (state.stats.wasted || 0) + 1;
+          continue;
+        }
+        if (!still)
+          continue;
+        let dx = c.x - p.x, dy = c.y - p.y;
+        if (!(dx * dx + dy * dy > B.drinkRadius * B.drinkRadius))
+          for (p.drinking = !0, c.drain += B.drinkRate * DT; c.drain >= 1 && c.blood > 0; )
+            c.drain -= 1, c.blood -= 1, spawnDrop(state, c.x, c.y, !0);
+      }
+    }
+    let drops = state.drops, magnet = rule === "drops";
+    for (let i = drops.length - 1; i >= 0; i--) {
+      let d = drops[i];
+      d.px = d.x, d.py = d.y, d.age += DT;
+      let dx = p.x - d.x, dy = p.y - d.y, dist = Math.hypot(dx, dy) || 1e-3, taken = !1;
+      if (d.pulled) {
+        d.pullT += DT;
+        let move = (d.stream ? B.streamSpeed : B.pullSpeed + B.pullAccel * d.pullT) * DT;
+        move >= dist - 4 ? taken = !0 : (d.x += dx / dist * move, d.y += dy / dist * move);
+      } else
+        d.age < B.popTime && (d.x += d.vx * DT, d.y += d.vy * DT), dist < B.collectRadius ? taken = !0 : magnet && d.age >= B.popTime && dist < B.pullRadius && (d.pulled = !0);
+      taken && drink(state, d.value, d.x, d.y), (taken || d.age > B.dropLife) && (drops[i] = drops[drops.length - 1], drops.pop());
+    }
+    for (let i = 0; i < state.corpses.length; i++)
+      state.corpses[i].age += DT;
+  }
+  function rebuildGrid(state) {
+    let grid = state.grid;
+    grid.clear();
+    let humans = state.humans;
+    for (let i = 0; i < humans.length; i++)
+      !humans[i].dead && !humans[i].gone && grid.insert(humans[i]);
+  }
+  function removeDead(state) {
+    let humans = state.humans, keep = 0;
+    for (let i = 0; i < humans.length; i++)
+      !humans[i].dead && !humans[i].gone && (humans[keep++] = humans[i]);
+    humans.length = keep;
+  }
+  function stepSim(state, input) {
+    state.over || state.offer || (state.t += DT, state.steps++, updatePlayer(state, input), updateHunger(state), !state.over && (updateDirector(state, DT), rebuildGrid(state), updateHumans(state, DT, state.grid), updateShots(state, DT), state.over || (rebuildGrid(state), updateClaws(state), updatePowers(state, DT, state.grid), updateBlood(state)), removeDead(state), !state.over && state.t >= SETTINGS.run.seconds && (state.over = !0, state.result = "dawn", emit(state, { type: "dawn" })), !state.over && state.pendingLevels > 0 && !state.offer && (state.offer = makeOffer(state), emit(state, { type: "levelup", level: state.player.level - state.pendingLevels + 1 }))));
+  }
+  function chooseCard(state, index) {
+    if (!state.offer)
+      return !1;
+    let card = state.offer[Math.max(0, Math.min(state.offer.length - 1, index))];
+    return applyPower(state, card.id), state.stats.cards.push(card.id), state.offer = null, state.pendingLevels--, state.player.invuln = Math.max(state.player.invuln, SETTINGS.player.safeAfterCard), emit(state, { type: "card", id: card.id }), !0;
+  }
+
+  // src/app/screen.js
+  function createScreen(canvas, host, options) {
+    let state = {
+      cssW: 0,
+      cssH: 0,
+      dpr: 1,
+      scale: 1,
+      // canvas pixels per world unit, before dpr
+      viewW: 0,
+      // world units visible across
+      viewH: 0,
+      // world units visible down
+      insets: { top: 0, right: 0, bottom: 0, left: 0 },
+      dprCap: options.dprCap
+    }, listeners = [], probe = document.createElement("div");
+    probe.className = "inset-probe", host.appendChild(probe);
+    function readInsets() {
+      let forced = options.forcedInsets;
+      if (forced) {
+        state.insets.top = forced[0], state.insets.right = forced[1], state.insets.bottom = forced[2], state.insets.left = forced[3];
+        return;
+      }
+      let cs = getComputedStyle(probe);
+      state.insets.top = parseFloat(cs.paddingTop) || 0, state.insets.right = parseFloat(cs.paddingRight) || 0, state.insets.bottom = parseFloat(cs.paddingBottom) || 0, state.insets.left = parseFloat(cs.paddingLeft) || 0;
+    }
+    function applyInsetVars() {
+      let s = host.style;
+      s.setProperty("--inset-top", state.insets.top + "px"), s.setProperty("--inset-right", state.insets.right + "px"), s.setProperty("--inset-bottom", state.insets.bottom + "px"), s.setProperty("--inset-left", state.insets.left + "px");
+    }
+    function resize() {
+      let rect = host.getBoundingClientRect(), cssW = Math.max(1, Math.round(rect.width)), cssH = Math.max(1, Math.round(rect.height)), dpr = Math.min(window.devicePixelRatio || 1, state.dprCap);
+      if (readInsets(), applyInsetVars(), cssW === state.cssW && cssH === state.cssH && dpr === state.dpr)
+        return;
+      state.cssW = cssW, state.cssH = cssH, state.dpr = dpr, canvas.width = Math.round(cssW * dpr), canvas.height = Math.round(cssH * dpr);
+      let upright = cssW / cssH < options.uprightAspect;
+      state.scale = upright ? cssW / options.viewWidth : cssH / options.viewHeightWide, state.viewW = cssW / state.scale, state.viewH = cssH / state.scale;
+      for (let i = 0; i < listeners.length; i++)
+        listeners[i](state);
+    }
+    function setDprCap(value) {
+      state.dprCap = value, state.dpr = -1, resize();
+    }
+    return window.addEventListener("resize", resize), window.addEventListener("orientationchange", () => {
+      setTimeout(resize, 60), setTimeout(resize, 400);
+    }), window.visualViewport && window.visualViewport.addEventListener("resize", resize), typeof ResizeObserver < "u" && new ResizeObserver(resize).observe(host), resize(), {
+      state,
+      resize,
+      setDprCap,
+      onResize(fn) {
+        listeners.push(fn);
+      }
+    };
+  }
+
+  // src/app/loop.js
+  function createLoop(options) {
+    let stepSeconds = 1 / options.stepsPerSecond, maxStepsPerFrame = options.maxStepsPerFrame, running = !1, paused = !1, rafId = 0, last = 0, accumulator = 0, freezeLeft = 0, timeScale = 1, stats = {
+      frames: 0,
+      frameMs: 0,
+      worstMs: 0,
+      avgMs: 16.7,
+      stepsThisFrame: 0,
+      dropped: 0
+    };
+    function frame(now) {
+      rafId = requestAnimationFrame(frame);
+      let elapsed = (now - last) / 1e3;
+      last = now, elapsed < 0 && (elapsed = 0), elapsed > 0.25 && (elapsed = stepSeconds, stats.dropped++);
+      let frameMs = elapsed * 1e3;
+      stats.frames++, stats.frameMs = frameMs, stats.avgMs += (frameMs - stats.avgMs) * 0.05, frameMs > stats.worstMs && (stats.worstMs = frameMs);
+      let steps = 0;
+      if (!paused)
+        if (freezeLeft > 0)
+          freezeLeft -= elapsed;
+        else {
+          for (accumulator += elapsed * timeScale; accumulator >= stepSeconds && steps < maxStepsPerFrame && (options.step(stepSeconds), accumulator -= stepSeconds, steps++, !(paused || freezeLeft > 0)); )
+            ;
+          accumulator > stepSeconds * maxStepsPerFrame && (accumulator = 0, stats.dropped++);
+        }
+      stats.stepsThisFrame = steps;
+      let alpha = paused ? 1 : Math.min(1, accumulator / stepSeconds);
+      options.draw(alpha, elapsed, paused);
+    }
+    return {
+      stats,
+      stepSeconds,
+      start() {
+        running || (running = !0, last = performance.now(), rafId = requestAnimationFrame(frame));
+      },
+      stop() {
+        running = !1, cancelAnimationFrame(rafId);
+      },
+      setPaused(value) {
+        paused = value, value || (last = performance.now(), accumulator = 0);
+      },
+      isPaused() {
+        return paused;
+      },
+      freeze(seconds) {
+        seconds > freezeLeft && (freezeLeft = seconds);
+      },
+      setTimeScale(value) {
+        timeScale = value;
+      },
+      resetStats() {
+        stats.frames = 0, stats.worstMs = 0, stats.dropped = 0;
+      }
+    };
+  }
+
+  // src/app/input.js
+  function createInput(surface, options) {
+    let state = {
+      mx: 0,
+      // steering, each from -1 to 1, length at most 1
+      my: 0,
+      held: !1,
+      // a thumb is on the glass (or a movement key is down)
+      pressed: !1,
+      // went down since the last read
+      released: !1,
+      // went up since the last read
+      tapped: !1,
+      // went down and up quickly without moving
+      flickX: 0,
+      // direction of the last quick release, or 0,0
+      flickY: 0,
+      stickX: 0,
+      // where the stick sits on screen, for drawing
+      stickY: 0,
+      knobX: 0,
+      knobY: 0,
+      stickVisible: !1
+    }, pointerId = null, downAt = 0, maxTravel = 0, lastX = 0, lastY = 0, lastT = 0, velX = 0, velY = 0, keys = /* @__PURE__ */ new Set(), enabled = !0;
+    function setVector(dx, dy) {
+      let len = Math.hypot(dx, dy), dead = options.deadZone;
+      if (len <= dead) {
+        state.mx = 0, state.my = 0;
+        return;
+      }
+      let amount = Math.min(1, (len - dead) / (options.fullAt - dead));
+      state.mx = dx / len * amount, state.my = dy / len * amount;
+    }
+    function onDown(e) {
+      if (!enabled || pointerId !== null || e.pointerType === "mouse" && e.button !== 0)
+        return;
+      pointerId = e.pointerId;
+      try {
+        surface.setPointerCapture(pointerId);
+      } catch {
+      }
+      let rect = surface.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+      state.stickX = x, state.stickY = y, state.knobX = x, state.knobY = y, state.stickVisible = !0, state.held = !0, state.pressed = !0, downAt = performance.now(), maxTravel = 0, lastX = x, lastY = y, lastT = downAt, velX = 0, velY = 0, setVector(0, 0), e.preventDefault();
+    }
+    function onMove(e) {
+      if (e.pointerId !== pointerId)
+        return;
+      let rect = surface.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top, dx = x - state.stickX, dy = y - state.stickY, len = Math.hypot(dx, dy);
+      len > maxTravel && (maxTravel = len);
+      let max = options.maxRadius;
+      if (len > max) {
+        let over = len - max;
+        state.stickX += dx / len * over, state.stickY += dy / len * over, dx = x - state.stickX, dy = y - state.stickY;
+      }
+      state.knobX = x, state.knobY = y, setVector(dx, dy);
+      let now = performance.now(), dt = Math.max(1, now - lastT), blend = 0.5;
+      velX += ((x - lastX) / dt * 1e3 - velX) * blend, velY += ((y - lastY) / dt * 1e3 - velY) * blend, lastX = x, lastY = y, lastT = now, e.preventDefault();
+    }
+    function onUp(e) {
+      if (e.pointerId !== pointerId)
+        return;
+      performance.now() - downAt <= options.tapMs && maxTravel <= options.tapTravel && (state.tapped = !0);
+      let sinceMove = performance.now() - lastT, speed = Math.hypot(velX, velY);
+      sinceMove < 80 && speed >= options.flickSpeed && (state.flickX = velX / speed, state.flickY = velY / speed), pointerId = null, state.held = keys.size > 0, state.released = !0, state.stickVisible = !1, state.mx = 0, state.my = 0, applyKeys();
+    }
+    function applyKeys() {
+      if (pointerId !== null)
+        return;
+      let x = 0, y = 0;
+      (keys.has("ArrowLeft") || keys.has("KeyA")) && (x -= 1), (keys.has("ArrowRight") || keys.has("KeyD")) && (x += 1), (keys.has("ArrowUp") || keys.has("KeyW")) && (y -= 1), (keys.has("ArrowDown") || keys.has("KeyS")) && (y += 1);
+      let len = Math.hypot(x, y);
+      state.mx = len > 0 ? x / len : 0, state.my = len > 0 ? y / len : 0;
+    }
+    let moveKeys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "KeyA", "KeyD", "KeyW", "KeyS"];
+    function onKeyDown(e) {
+      enabled && moveKeys.indexOf(e.code) >= 0 && (keys.has(e.code) || (keys.size === 0 && pointerId === null && (state.pressed = !0), keys.add(e.code)), state.held = !0, applyKeys(), e.preventDefault());
+    }
+    function onKeyUp(e) {
+      keys.delete(e.code) && (keys.size === 0 && pointerId === null && (state.held = !1, state.released = !0), applyKeys());
+    }
+    function cancelAll() {
+      pointerId !== null && (pointerId = null, state.stickVisible = !1, state.released = !0), keys.clear(), state.held = !1, state.mx = 0, state.my = 0;
+    }
+    return surface.addEventListener("pointerdown", onDown), surface.addEventListener("pointermove", onMove), surface.addEventListener("pointerup", onUp), surface.addEventListener("pointercancel", onUp), surface.addEventListener("lostpointercapture", (e) => {
+      e.pointerId === pointerId && onUp(e);
+    }), surface.addEventListener("contextmenu", (e) => e.preventDefault()), surface.addEventListener("touchstart", (e) => e.preventDefault(), { passive: !1 }), surface.addEventListener("touchmove", (e) => e.preventDefault(), { passive: !1 }), surface.addEventListener("gesturestart", (e) => e.preventDefault()), window.addEventListener("keydown", onKeyDown), window.addEventListener("keyup", onKeyUp), window.addEventListener("blur", cancelAll), {
+      state,
+      // Call once per simulation step, after reading the state.
+      endStep() {
+        state.pressed = !1, state.released = !1, state.tapped = !1, state.flickX = 0, state.flickY = 0;
+      },
+      setEnabled(value) {
+        enabled = value, value || cancelAll();
+      },
+      cancelAll
+    };
+  }
+
+  // src/app/ui.js
+  function el(tag, className, text) {
+    let node = document.createElement(tag);
+    return className && (node.className = className), text !== void 0 && (node.textContent = text), node;
+  }
+  function clock(seconds) {
+    let s = Math.max(0, Math.ceil(seconds)), m = Math.floor(s / 60), r = s % 60;
+    return m + ":" + (r < 10 ? "0" : "") + r;
+  }
+  var CAUSES = {
+    peasant: "Beaten down by the mob.",
+    watchman: "Cut down by the watch.",
+    archer: "Shot by an archer.",
+    hunger: "Starved. You went too long without blood."
+  }, SOURCES = {
+    peasant: "a peasant's blow",
+    watchman: "a watchman's blade",
+    archer: "an arrow"
+  };
+  function createUi(app, handlers, version) {
+    let hud = app.querySelector("#hud"), overlay = app.querySelector("#overlay"), top = el("div", "hud-top"), bars = el("div", "bars"), bloodBar = el("div", "bar blood"), bloodFill = el("i");
+    bloodBar.appendChild(bloodFill);
+    let levelBar = el("div", "bar level"), levelFill = el("i");
+    levelBar.appendChild(levelFill);
+    let row = el("div", "hud-row"), levelText = el("span", "", "Level 1"), clockText = el("span", "", ""), escapeText = el("span", "warn", "");
+    row.appendChild(levelText), row.appendChild(clockText), row.appendChild(escapeText), bars.appendChild(bloodBar), bars.appendChild(levelBar), bars.appendChild(row);
+    let pauseButton = el("button", "btn-pause");
+    pauseButton.setAttribute("aria-label", "Pause"), pauseButton.appendChild(el("span")), pauseButton.appendChild(el("span")), pauseButton.addEventListener("click", () => handlers.onPause()), top.appendChild(bars), top.appendChild(pauseButton);
+    let banner = el("div", "banner"), hint = el("div", "hint");
+    hud.appendChild(top), hud.appendChild(banner), hud.appendChild(hint), top.hidden = !0;
+    let bannerUntil = 0, hintUntil = 0, shown = { blood: -1, level: -1, levelN: -1, clock: "", escapes: -1, low: !1 }, pulseUntil = 0;
+    function screenNode(name) {
+      let node = el("div", "screen screen-" + name);
+      return node.hidden = !0, overlay.appendChild(node), node;
+    }
+    let title = screenNode("title"), cards = screenNode("cards"), pause = screenNode("pause"), end = screenNode("end"), debugLine = app.querySelector("#debug");
+    function versionLabel() {
+      let label = el("button", "version", "v" + version);
+      return label.setAttribute("aria-label", "Version " + version + ". Tap to show technical details."), label.addEventListener("click", () => {
+        debugLine.hidden = !debugLine.hidden;
+      }), label;
+    }
+    function modeButton(mode, big) {
+      let def = SETTINGS.modes[mode], button = el("button", big ? "btn mode big" : "btn mode");
+      return button.appendChild(el("strong", "", def.label)), button.appendChild(el("span", "", def.line)), button.addEventListener("click", () => handlers.onStart(mode)), button;
+    }
+    (function() {
+      let head = el("div", "title-head");
+      head.appendChild(el("h1", "", "Vampire")), head.appendChild(el("p", "sub", "No Survivors")), head.appendChild(el("p", "lead", "One night. One thumb. Three ways to feed. Play each and see which one you want again."));
+      let list = el("div", "stack");
+      for (let i = 0; i < MODES.length; i++)
+        list.appendChild(modeButton(MODES[i], !0));
+      let foot = el("div", "foot");
+      foot.appendChild(el("span", "", "Plain shapes on purpose: this build tests the feel.")), foot.appendChild(versionLabel()), title.appendChild(head), title.appendChild(list), title.appendChild(foot);
+    })();
+    let cardsTitle = el("h2", "", "LEVEL 2"), cardsSub = el("p", "sub", "Choose one"), cardsList = el("div", "stack");
+    cards.appendChild(el("div", "spacer")), cards.appendChild(cardsTitle), cards.appendChild(cardsSub), cards.appendChild(cardsList);
+    let cardsOpenAt = 0;
+    function showCards(offer, level) {
+      cardsTitle.textContent = "LEVEL " + level, cardsList.textContent = "", cardsOpenAt = performance.now(), cardsList.classList.add("locked"), setTimeout(() => cardsList.classList.remove("locked"), SETTINGS.feel.cardLock * 1e3);
+      for (let i = 0; i < offer.length; i++) {
+        let card = offer[i], button = el("button", "btn card"), head = el("strong", "", card.name);
+        card.level > 1 && head.appendChild(el("em", "", " level " + card.level)), button.appendChild(head), button.appendChild(el("span", "", card.text)), button.addEventListener("click", () => {
+          performance.now() - cardsOpenAt < SETTINGS.feel.cardLock * 1e3 || handlers.onCard(i);
+        }), cardsList.appendChild(button);
+      }
+      cards.hidden = !1;
+    }
+    let soundButton = el("button", "btn", ""), shakeButton = el("button", "btn", "");
+    (function() {
+      pause.appendChild(el("div", "spacer")), pause.appendChild(el("h2", "", "Paused"));
+      let list = el("div", "stack"), resume = el("button", "btn big", "Resume");
+      resume.addEventListener("click", () => handlers.onResume()), soundButton.addEventListener("click", () => handlers.onToggleSound()), shakeButton.addEventListener("click", () => handlers.onToggleShake());
+      let restart = el("button", "btn", "Start this night again");
+      restart.addEventListener("click", () => handlers.onRestart());
+      let quit = el("button", "btn", "Back to the title");
+      quit.addEventListener("click", () => handlers.onQuit()), list.appendChild(resume), list.appendChild(soundButton), list.appendChild(shakeButton), list.appendChild(restart), list.appendChild(quit), pause.appendChild(list);
+      let foot = el("div", "foot");
+      foot.appendChild(versionLabel()), pause.appendChild(foot);
+    })();
+    function setToggles(sound, shake) {
+      soundButton.textContent = sound ? "Sound: on" : "Sound: off", shakeButton.textContent = shake ? "Screen shake: on" : "Screen shake: off";
+    }
+    let endTitle = el("h2", "", ""), endCause = el("p", "lead", ""), endHits = el("ul", "hits"), endStats = el("dl", "stats"), endButtons = el("div", "stack"), reportBox = el("textarea", "report");
+    reportBox.readOnly = !0, reportBox.hidden = !0, reportBox.id = "report-text", reportBox.setAttribute("aria-label", "Run report"), end.appendChild(endTitle), end.appendChild(endCause), end.appendChild(endHits), end.appendChild(endStats), end.appendChild(el("div", "spacer")), end.appendChild(endButtons), end.appendChild(reportBox);
+    function stat(name, value) {
+      endStats.appendChild(el("dt", "", name)), endStats.appendChild(el("dd", "", value));
+    }
+    function showEnd(data) {
+      let won = data.result === "dawn";
+      if (endTitle.textContent = won ? "Dawn. You live." : "You died.", endCause.textContent = won ? "The town buries its dead. You sleep." : CAUSES[data.cause] || "", endHits.textContent = "", !won && data.cause !== "hunger") {
+        let hits = data.hits.slice(-3);
+        for (let i = 0; i < hits.length; i++)
+          endHits.appendChild(el("li", "", clock(SETTINGS.run.seconds - hits[i].t) + " before dawn: " + (SOURCES[hits[i].source] || hits[i].source) + ", " + Math.round(hits[i].dmg) + " blood"));
+      }
+      endStats.textContent = "", stat("Variation", SETTINGS.modes[data.mode].label), stat("Survived", clock(data.t) + " of " + clock(SETTINGS.run.seconds)), stat("Killed", String(data.kills)), data.mode === "hunt" && stat("Escaped", String(data.escapes)), stat("Level", String(data.level)), stat("Powers", data.powers || "none"), endButtons.textContent = "";
+      let again = el("button", "btn big", "Again");
+      again.addEventListener("click", () => handlers.onStart(data.mode)), endButtons.appendChild(again);
+      for (let i = 0; i < MODES.length; i++)
+        MODES[i] !== data.mode && endButtons.appendChild(modeButton(MODES[i], !1));
+      let copy = el("button", "btn small", "Copy a report of this night");
+      copy.addEventListener("click", () => {
+        reportBox.value = data.report;
+        let done = () => {
+          copy.textContent = "Copied. Paste it into the chat.";
+        }, fallback = () => {
+          reportBox.hidden = !1, reportBox.focus(), reportBox.select(), copy.textContent = "Select the text below and copy it";
+        };
+        navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(data.report).then(done, fallback) : fallback();
+      }), endButtons.appendChild(copy), reportBox.hidden = !0, end.hidden = !1;
+    }
+    function hideScreens() {
+      title.hidden = !0, cards.hidden = !0, pause.hidden = !0, end.hidden = !0;
+    }
+    function showBanner(text) {
+      banner.textContent = text, banner.classList.add("on"), bannerUntil = performance.now() + (SETTINGS.feel.bannerBase + SETTINGS.feel.bannerPerChar * text.length) * 1e3;
+    }
+    function showHint(text, seconds) {
+      hint.textContent = text, hint.classList.add("on"), hintUntil = performance.now() + seconds * 1e3;
+    }
+    function update(state) {
+      let t = performance.now();
+      if (bannerUntil && t > bannerUntil && (banner.classList.remove("on"), bannerUntil = 0), hintUntil && t > hintUntil && (hint.classList.remove("on"), hintUntil = 0), !state)
+        return;
+      let p = state.player, blood = Math.max(0, Math.round(p.blood / p.maxBlood * 200) / 200);
+      blood !== shown.blood && (blood > shown.blood && shown.blood >= 0 && (bloodBar.classList.add("pulse"), pulseUntil = t + 120), shown.blood = blood, bloodFill.style.transform = "scaleX(" + blood + ")"), pulseUntil && t > pulseUntil && (bloodBar.classList.remove("pulse"), pulseUntil = 0);
+      let low = blood < SETTINGS.player.lowBlood;
+      low !== shown.low && (shown.low = low, bloodBar.classList.toggle("low", low));
+      let level = Math.round(p.xp / xpNeeded(p.level) * 100) / 100;
+      level !== shown.level && (shown.level = level, levelFill.style.transform = "scaleX(" + Math.min(1, level) + ")"), p.level !== shown.levelN && (shown.levelN = p.level, levelText.textContent = "Level " + p.level);
+      let text = "Dawn in " + clock(SETTINGS.run.seconds - state.t);
+      text !== shown.clock && (shown.clock = text, clockText.textContent = text), state.mode === "hunt" && state.stats.escapes !== shown.escapes && (shown.escapes = state.stats.escapes, escapeText.textContent = "Escaped " + state.stats.escapes);
+    }
+    return {
+      update,
+      showCards,
+      showEnd,
+      showBanner,
+      showHint,
+      hideScreens,
+      setToggles,
+      showTitle() {
+        hideScreens(), top.hidden = !0, banner.classList.remove("on"), hint.classList.remove("on"), title.hidden = !1;
+      },
+      showPause() {
+        pause.hidden = !1;
+      },
+      hidePause() {
+        pause.hidden = !0;
+      },
+      hideCards() {
+        cards.hidden = !0;
+      },
+      startNight(mode) {
+        hideScreens(), top.hidden = !1, shown = { blood: -1, level: -1, levelN: -1, clock: "", escapes: -1, low: !1 }, escapeText.textContent = mode === "hunt" ? "Escaped 0" : "", bloodBar.classList.remove("low"), banner.classList.remove("on");
+      },
+      setDebug(text) {
+        debugLine.hidden || (debugLine.textContent = text);
+      },
+      showDebug() {
+        debugLine.hidden = !1;
+      }
+    };
+  }
+
+  // src/render/renderer.js
+  var C = {
+    outside: "#07060b",
+    ground: "#17151f",
+    groundLine: "#1d1b27",
+    wall: "#34303f",
+    stain: "#420a12",
+    corpse: "#4b4539",
+    corpseSteel: "#3a4049",
+    corpseOlive: "#3f4636",
+    drop: "#ff2b3c",
+    pool: "#e01426",
+    peasant: "#b8a98f",
+    prey: "#ddd2bd",
+    watchman: "#7c8896",
+    archer: "#93a27e",
+    outline: "#0b0a10",
+    danger: "#ffb020",
+    player: "#f6f1e7",
+    cloak: "#231d2c",
+    spurt: "#b3101d"
+  }, TAU = Math.PI * 2;
+  function createRenderer(canvas, screen) {
+    let ctx = canvas.getContext("2d", { alpha: !1 }), fx = {
+      particles: [],
+      stains: [],
+      arcs: [],
+      rings: [],
+      gateFlash: [0, 0, 0, 0],
+      trauma: 0,
+      hurt: 0,
+      pulse: 0,
+      time: 0
+    }, shakeEnabled = !0, hurtGradient = null, gradientFor = "";
+    function reset() {
+      fx.particles.length = 0, fx.stains.length = 0, fx.arcs.length = 0, fx.rings.length = 0, fx.gateFlash[0] = fx.gateFlash[1] = fx.gateFlash[2] = fx.gateFlash[3] = 0, fx.trauma = 0, fx.hurt = 0;
+    }
+    function spurt(x, y, dirX, dirY, count, speed) {
+      for (let i = 0; i < count; i++) {
+        fx.particles.length >= SETTINGS.feel.particleCap && fx.particles.shift();
+        let spread = (Math.random() - 0.5) * 1.5, a = Math.atan2(dirY, dirX) + spread, v = speed * (0.35 + Math.random() * 0.9), life = 0.22 + Math.random() * 0.25;
+        fx.particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life, max: life, size: 2 + Math.random() * 2.2 });
+      }
+    }
+    function stain(x, y, r) {
+      fx.stains.length >= SETTINGS.feel.stainCap && fx.stains.shift(), fx.stains.push({ x, y, r, age: 0, squash: 0.6 + Math.random() * 0.35, rot: Math.random() * Math.PI });
+    }
+    function onEvent(e) {
+      if (e.type === "swipe")
+        fx.arcs.push({ x: e.x, y: e.y, ang: e.ang, reach: e.reach, half: e.half, t: 0 });
+      else if (e.type === "hit")
+        spurt(e.x, e.y, e.dirX, e.dirY, 3, 150);
+      else if (e.type === "kill") {
+        spurt(e.x, e.y, e.dirX, e.dirY, e.gib ? 16 : 7, e.gib ? 260 : 180), stain(e.x, e.y, (e.gib ? 17 : 10) + Math.random() * 6);
+        let sprays = e.gib ? 5 : 2;
+        for (let i = 0; i < sprays; i++) {
+          let d = 14 + Math.random() * (e.gib ? 44 : 24), side = (Math.random() - 0.5) * 16;
+          stain(e.x + e.dirX * d - e.dirY * side, e.y + e.dirY * d + e.dirX * side, 2.5 + Math.random() * 3.5);
+        }
+      } else if (e.type === "hurt") {
+        fx.hurt = 1, fx.trauma = Math.min(1, fx.trauma + SETTINGS.feel.shakeHurt);
+        let dx = e.x - e.fromX, dy = e.y - e.fromY, d = Math.hypot(dx, dy) || 1;
+        spurt(e.x, e.y, dx / d, dy / d, 8, 200);
+      } else e.type === "nova" ? (fx.rings.push({ x: e.x, y: e.y, radius: e.radius, t: 0, life: 0.28 }), fx.trauma = Math.min(1, fx.trauma + SETTINGS.feel.shakeNova)) : e.type === "escape" || e.type === "hunter" ? fx.gateFlash[e.gate] = 1 : e.type === "mist" && fx.rings.push({ x: e.x, y: e.y, radius: 46, t: 0, life: 0.35, pale: !0 });
+    }
+    function updateFx(dt) {
+      fx.time += dt;
+      for (let i = fx.particles.length - 1; i >= 0; i--) {
+        let p = fx.particles[i];
+        if (p.life -= dt, p.life <= 0) {
+          fx.particles[i] = fx.particles[fx.particles.length - 1], fx.particles.pop();
+          continue;
+        }
+        let drag = Math.max(0, 1 - 6 * dt);
+        p.vx *= drag, p.vy *= drag, p.x += p.vx * dt, p.y += p.vy * dt;
+      }
+      for (let i = fx.stains.length - 1; i >= 0; i--)
+        fx.stains[i].age += dt, fx.stains[i].age > SETTINGS.feel.stainLife && fx.stains.splice(i, 1);
+      for (let i = fx.arcs.length - 1; i >= 0; i--)
+        fx.arcs[i].t += dt, fx.arcs[i].t > 0.15 && fx.arcs.splice(i, 1);
+      for (let i = fx.rings.length - 1; i >= 0; i--)
+        fx.rings[i].t += dt, fx.rings[i].t > fx.rings[i].life && fx.rings.splice(i, 1);
+      for (let i = 0; i < 4; i++)
+        fx.gateFlash[i] = Math.max(0, fx.gateFlash[i] - dt * 1.2);
+      fx.trauma = Math.max(0, fx.trauma - SETTINGS.feel.shakeDecay * dt), fx.hurt = Math.max(0, fx.hurt - dt * 3.2);
+    }
+    function dawnGround(state) {
+      let toDawn = SETTINGS.run.seconds - state.t;
+      if (toDawn >= 25)
+        return C.ground;
+      let k = Math.max(0, Math.min(1, 1 - toDawn / 25)) * (state.result === "dawn" ? 1.6 : 1), r = Math.round(23 + 46 * k), g = Math.round(21 + 30 * k), b = Math.round(31 + 14 * k);
+      return "rgb(" + r + "," + g + "," + b + ")";
+    }
+    function drawArena(view, state) {
+      let W2 = SETTINGS.arena.w, H2 = SETTINGS.arena.h;
+      ctx.fillStyle = dawnGround(state), ctx.fillRect(0, 0, W2, H2), ctx.strokeStyle = C.groundLine, ctx.lineWidth = 1, ctx.beginPath();
+      let step = 60, x0 = Math.max(0, Math.floor(view.left / step) * step), x1 = Math.min(W2, view.right), y0 = Math.max(0, Math.floor(view.top / step) * step), y1 = Math.min(H2, view.bottom);
+      for (let x = x0; x <= x1; x += step)
+        ctx.moveTo(x, Math.max(0, view.top)), ctx.lineTo(x, Math.min(H2, view.bottom));
+      for (let y = y0; y <= y1; y += step)
+        ctx.moveTo(Math.max(0, view.left), y), ctx.lineTo(Math.min(W2, view.right), y);
+      ctx.stroke();
+      let g = SETTINGS.arena.gateWidth / 2;
+      ctx.strokeStyle = C.wall, ctx.lineWidth = 10, ctx.lineCap = "butt", ctx.beginPath(), ctx.moveTo(-5, -5), ctx.lineTo(W2 / 2 - g, -5), ctx.moveTo(W2 / 2 + g, -5), ctx.lineTo(W2 + 5, -5), ctx.lineTo(W2 + 5, H2 / 2 - g), ctx.moveTo(W2 + 5, H2 / 2 + g), ctx.lineTo(W2 + 5, H2 + 5), ctx.lineTo(W2 / 2 + g, H2 + 5), ctx.moveTo(W2 / 2 - g, H2 + 5), ctx.lineTo(-5, H2 + 5), ctx.lineTo(-5, H2 / 2 + g), ctx.moveTo(-5, H2 / 2 - g), ctx.lineTo(-5, -5), ctx.stroke();
+      for (let i = 0; i < 4; i++) {
+        let gate = GATES[i], tx = -gate.ny, ty = gate.nx;
+        ctx.globalAlpha = 0.28 + 0.72 * fx.gateFlash[i], ctx.strokeStyle = C.danger, ctx.lineWidth = 3 + 5 * fx.gateFlash[i], ctx.setLineDash([10, 8]), ctx.beginPath(), ctx.moveTo(gate.x - tx * g, gate.y - ty * g), ctx.lineTo(gate.x + tx * g, gate.y + ty * g), ctx.stroke(), ctx.setLineDash([]);
+      }
+      ctx.globalAlpha = 1;
+    }
+    function drawStains() {
+      ctx.fillStyle = C.stain, ctx.beginPath();
+      let fadeFrom = SETTINGS.feel.stainLife - 4;
+      for (let i = 0; i < fx.stains.length; i++) {
+        let s = fx.stains[i];
+        if (s.age > fadeFrom)
+          continue;
+        let grow = Math.min(1, 0.35 + s.age * 1.6);
+        ctx.moveTo(s.x + s.r * grow, s.y), ctx.ellipse(s.x, s.y, s.r * grow, s.r * grow * s.squash, s.rot, 0, TAU);
+      }
+      ctx.fill();
+      for (let i = 0; i < fx.stains.length; i++) {
+        let s = fx.stains[i];
+        s.age <= fadeFrom || (ctx.globalAlpha = Math.max(0, (SETTINGS.feel.stainLife - s.age) / 4), ctx.beginPath(), ctx.ellipse(s.x, s.y, s.r, s.r * s.squash, s.rot, 0, TAU), ctx.fill());
+      }
+      ctx.globalAlpha = 1;
+    }
+    function drawCorpses(state) {
+      let corpses = state.corpses;
+      for (let pass = 0; pass < 3; pass++) {
+        let type = pass === 0 ? "peasant" : pass === 1 ? "watchman" : "archer";
+        ctx.fillStyle = pass === 0 ? C.corpse : pass === 1 ? C.corpseSteel : C.corpseOlive, ctx.beginPath();
+        for (let i = 0; i < corpses.length; i++) {
+          let c = corpses[i];
+          if (c.type !== type || c.gib)
+            continue;
+          let a = Math.atan2(c.dirY, c.dirX);
+          ctx.moveTo(c.x + c.r * 1.25, c.y), ctx.ellipse(c.x, c.y, c.r * 1.25, c.r * 0.7, a, 0, TAU);
+        }
+        ctx.fill();
+      }
+      if (SETTINGS.modes[state.mode].bloodRule === "pools") {
+        let pulse = 0.75 + 0.25 * Math.sin(fx.time * 6);
+        for (let i = 0; i < corpses.length; i++) {
+          let c = corpses[i];
+          if (c.blood <= 0)
+            continue;
+          let left = Math.max(0, 1 - c.age / SETTINGS.blood.poolLife);
+          ctx.globalAlpha = (0.35 + 0.65 * left) * pulse, ctx.fillStyle = C.pool, ctx.beginPath(), ctx.arc(c.x, c.y, 3.5 + c.blood * 1.6, 0, TAU), ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+    function drawDrops(state, alpha) {
+      let drops = state.drops;
+      ctx.fillStyle = C.drop, ctx.beginPath();
+      for (let i = 0; i < drops.length; i++) {
+        let d = drops[i], x = d.px + (d.x - d.px) * alpha, y = d.py + (d.y - d.py) * alpha, r = 3.4 * (d.age > SETTINGS.blood.dropLife - 2 ? 0.6 : 1);
+        ctx.moveTo(x + r, y), ctx.arc(x, y, r, 0, TAU);
+      }
+      ctx.fill();
+    }
+    function drawWarnings(state, alpha) {
+      let p = state.player, humans = state.humans;
+      ctx.strokeStyle = C.danger;
+      for (let i = 0; i < humans.length; i++) {
+        let h = humans[i];
+        if (!(h.dead || h.gone)) {
+          if (h.ai === "windup") {
+            let def = SETTINGS.humans[h.type], full = def.reach + h.r + p.radius + def.strikeSlack, share = Math.max(0, h.aiT / def.windup);
+            ctx.lineWidth = 2.5, ctx.globalAlpha = 0.9, ctx.beginPath(), ctx.arc(h.x, h.y, h.r + (full - h.r) * share, 0, TAU), ctx.stroke();
+          } else if (h.ai === "aim") {
+            let def = SETTINGS.humans.archer, len = def.shotSpeed * def.shotLife;
+            ctx.lineWidth = h.locked ? 2.5 : 1.5, ctx.globalAlpha = h.locked ? 0.95 : 0.5, ctx.setLineDash(h.locked ? [] : [8, 7]), ctx.beginPath(), ctx.moveTo(h.x, h.y), ctx.lineTo(h.x + h.ax * len, h.y + h.ay * len), ctx.stroke(), ctx.setLineDash([]);
+          }
+        }
+      }
+      ctx.globalAlpha = 1, ctx.strokeStyle = C.danger, ctx.lineWidth = 3, ctx.beginPath();
+      for (let i = 0; i < state.shots.length; i++) {
+        let s = state.shots[i], x = s.px + (s.x - s.px) * alpha, y = s.py + (s.y - s.py) * alpha, speed = Math.hypot(s.vx, s.vy) || 1;
+        ctx.moveTo(x, y), ctx.lineTo(x - s.vx / speed * 14, y - s.vy / speed * 14);
+      }
+      ctx.stroke();
+    }
+    function drawHumans(state, alpha) {
+      let p = state.player, humans = state.humans;
+      ctx.lineWidth = 1.5, ctx.strokeStyle = C.outline;
+      for (let pass = 0; pass < 2; pass++) {
+        ctx.fillStyle = pass === 0 ? C.peasant : C.prey, ctx.beginPath();
+        for (let i = 0; i < humans.length; i++) {
+          let h = humans[i];
+          if (h.type !== "peasant" || h.dead || h.gone || h.role === "prey" != (pass === 1))
+            continue;
+          let x = h.px + (h.x - h.px) * alpha, y = h.py + (h.y - h.py) * alpha;
+          ctx.moveTo(x + h.r, y), ctx.arc(x, y, h.r, 0, TAU);
+        }
+        ctx.fill(), ctx.stroke();
+      }
+      ctx.fillStyle = C.watchman, ctx.beginPath();
+      for (let i = 0; i < humans.length; i++) {
+        let h = humans[i];
+        if (h.type !== "watchman" || h.dead || h.gone)
+          continue;
+        let x = h.px + (h.x - h.px) * alpha, y = h.py + (h.y - h.py) * alpha, r = h.r * 1.25;
+        ctx.moveTo(x, y - r), ctx.lineTo(x + r, y), ctx.lineTo(x, y + r), ctx.lineTo(x - r, y), ctx.closePath();
+      }
+      ctx.fill(), ctx.stroke(), ctx.fillStyle = C.archer, ctx.beginPath();
+      for (let i = 0; i < humans.length; i++) {
+        let h = humans[i];
+        if (h.type !== "archer" || h.dead || h.gone)
+          continue;
+        let x = h.px + (h.x - h.px) * alpha, y = h.py + (h.y - h.py) * alpha, a = h.ai === "aim" ? Math.atan2(h.ay, h.ax) : Math.atan2(p.y - h.y, p.x - h.x), r = h.r * 1.35;
+        ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r), ctx.lineTo(x + Math.cos(a + 2.4) * r, y + Math.sin(a + 2.4) * r), ctx.lineTo(x + Math.cos(a - 2.4) * r, y + Math.sin(a - 2.4) * r), ctx.closePath();
+      }
+      ctx.fill(), ctx.stroke(), ctx.fillStyle = "#ffffff", ctx.beginPath();
+      for (let i = 0; i < humans.length; i++) {
+        let h = humans[i];
+        h.flash > 0 && !h.dead && !h.gone && (ctx.moveTo(h.x + h.r * 1.2, h.y), ctx.arc(h.x, h.y, h.r * 1.2, 0, TAU));
+      }
+      ctx.fill(), ctx.fillStyle = C.danger, ctx.beginPath();
+      for (let i = 0; i < humans.length; i++) {
+        let h = humans[i];
+        if (h.witness && !h.dead && !h.gone) {
+          let x = h.px + (h.x - h.px) * alpha, y = h.py + (h.y - h.py) * alpha;
+          ctx.moveTo(x + 3, y - h.r - 6), ctx.arc(x, y - h.r - 6, 3, 0, TAU);
+        }
+      }
+      ctx.fill();
+    }
+    function drawAttacks(state, px, py) {
+      let p = state.player;
+      for (let i = 0; i < fx.arcs.length; i++) {
+        let a = fx.arcs[i], k = 1 - a.t / 0.15;
+        ctx.fillStyle = "rgba(246,241,231," + (0.55 * k).toFixed(3) + ")", ctx.beginPath(), ctx.arc(a.x, a.y, a.reach + 6, a.ang - a.half, a.ang + a.half), ctx.arc(a.x, a.y, (a.reach + 6) * (0.45 + 0.3 * (1 - k)), a.ang + a.half, a.ang - a.half, !0), ctx.closePath(), ctx.fill();
+      }
+      for (let i = 0; i < fx.rings.length; i++) {
+        let r = fx.rings[i], k = r.t / r.life;
+        ctx.globalAlpha = 1 - k, ctx.strokeStyle = r.pale ? C.player : C.drop, ctx.lineWidth = 6 * (1 - k) + 1, ctx.beginPath(), ctx.arc(r.x, r.y, r.radius * (0.25 + 0.75 * k), 0, TAU), ctx.stroke();
+      }
+      if (ctx.globalAlpha = 1, state.bolts.length > 0) {
+        ctx.strokeStyle = C.drop, ctx.lineWidth = 3.5, ctx.beginPath();
+        for (let i = 0; i < state.bolts.length; i++) {
+          let b = state.bolts[i], speed = Math.hypot(b.vx, b.vy) || 1;
+          ctx.moveTo(b.x, b.y), ctx.lineTo(b.x - b.vx / speed * 18, b.y - b.vy / speed * 18);
+        }
+        ctx.stroke();
+      }
+      let bats = p.powers.bats || 0;
+      if (bats > 0) {
+        let def = SETTINGS.powers.bats, count = def.count[bats - 1];
+        ctx.fillStyle = C.player, ctx.beginPath();
+        for (let i = 0; i < count; i++) {
+          let a = p.batAngle + i * TAU / count, bx = px + Math.cos(a) * def.radius, by = py + Math.sin(a) * def.radius, flap = 3 + Math.sin(fx.time * 22 + i) * 1.5;
+          ctx.moveTo(bx - 7, by - flap), ctx.lineTo(bx, by + 2), ctx.lineTo(bx + 7, by - flap), ctx.lineTo(bx, by - 1), ctx.closePath();
+        }
+        ctx.fill();
+      }
+      let gaze = p.powers.gaze || 0;
+      gaze > 0 && (ctx.strokeStyle = "rgba(246,241,231,0.09)", ctx.lineWidth = 2, ctx.beginPath(), ctx.arc(px, py, SETTINGS.powers.gaze.radius[gaze - 1], 0, TAU), ctx.stroke()), p.drinking && (ctx.strokeStyle = "rgba(255,43,60,0.22)", ctx.lineWidth = 2, ctx.beginPath(), ctx.arc(px, py, SETTINGS.blood.drinkRadius, 0, TAU), ctx.stroke());
+    }
+    function drawParticles() {
+      ctx.fillStyle = C.spurt;
+      for (let i = 0; i < fx.particles.length; i++) {
+        let q = fx.particles[i], size = q.size * (0.4 + 0.6 * (q.life / q.max));
+        ctx.fillRect(q.x - size / 2, q.y - size / 2, size, size);
+      }
+    }
+    function drawPlayer(state, px, py) {
+      let p = state.player, mist = p.mistT > 0, blink = p.invuln > 0 && !mist && Math.floor(fx.time * 20) % 2 === 0;
+      ctx.globalAlpha = mist ? 0.4 : blink ? 0.45 : 1;
+      let fxn = p.swipeT < 0.15 ? Math.cos(p.swipeAng) : p.fx, fyn = p.swipeT < 0.15 ? Math.sin(p.swipeAng) : p.fy, lunge = p.swipeT < 0.1 ? 4 * (1 - p.swipeT / 0.1) : 0, x = px + fxn * lunge, y = py + fyn * lunge, r = p.radius;
+      ctx.fillStyle = C.cloak, ctx.strokeStyle = C.player, ctx.lineWidth = 1.5, ctx.beginPath(), ctx.moveTo(x - fyn * r * 1.05, y + fxn * r * 1.05), ctx.lineTo(x - fxn * r * 2.3, y - fyn * r * 2.3), ctx.lineTo(x + fyn * r * 1.05, y - fxn * r * 1.05), ctx.closePath(), ctx.fill(), ctx.stroke(), ctx.fillStyle = C.player, ctx.strokeStyle = C.outline, ctx.lineWidth = 2, ctx.beginPath(), ctx.arc(x, y, r, 0, TAU), ctx.fill(), ctx.stroke(), ctx.globalAlpha = 1;
+    }
+    function drawOverlays(state, input, w, h, phase) {
+      let key = w + "x" + h;
+      if (gradientFor !== key) {
+        gradientFor = key;
+        let reach = Math.hypot(w, h) / 2;
+        hurtGradient = ctx.createRadialGradient(w / 2, h / 2, reach * 0.45, w / 2, h / 2, reach), hurtGradient.addColorStop(0, "rgba(160,0,14,0)"), hurtGradient.addColorStop(1, "rgba(160,0,14,0.95)");
+      }
+      let p = state.player, low = p.blood < p.maxBlood * SETTINGS.player.lowBlood && !state.over, edge = fx.hurt * 0.75;
+      if (low) {
+        let beat = 0.5 + 0.5 * Math.sin(fx.time * 7);
+        edge = Math.max(edge, 0.3 + 0.25 * beat);
+      }
+      state.over && state.result === "dead" && (edge = 0.9), edge > 0.01 && (ctx.globalAlpha = edge, ctx.fillStyle = hurtGradient, ctx.fillRect(0, 0, w, h), ctx.globalAlpha = 1), input && input.stickVisible && phase !== "levelup" && (ctx.globalAlpha = 0.25, ctx.strokeStyle = C.player, ctx.lineWidth = 2, ctx.beginPath(), ctx.arc(input.stickX, input.stickY, SETTINGS.input.maxRadius, 0, TAU), ctx.stroke(), ctx.globalAlpha = 0.4, ctx.fillStyle = C.player, ctx.beginPath(), ctx.arc(input.knobX, input.knobY, 14, 0, TAU), ctx.fill(), ctx.globalAlpha = 1);
+    }
+    function draw(state, phase, alpha, dt, input) {
+      let sc = screen.state, dpr = sc.dpr, w = sc.cssW, h = sc.cssH;
+      if (updateFx(dt), ctx.setTransform(dpr, 0, 0, dpr, 0, 0), ctx.fillStyle = C.outside, ctx.fillRect(0, 0, w, h), !state)
+        return;
+      let p = state.player, px = p.px + (p.x - p.px) * alpha, py = p.py + (p.y - p.py) * alpha, shakeX = 0, shakeY = 0;
+      if (shakeEnabled && fx.trauma > 0) {
+        let amount = SETTINGS.feel.shakeMax * fx.trauma * fx.trauma;
+        shakeX = (Math.random() * 2 - 1) * amount, shakeY = (Math.random() * 2 - 1) * amount;
+      }
+      let scale = sc.scale, originX = w / 2 - px * scale + shakeX, originY = h * SETTINGS.view.playerScreenY - py * scale + shakeY;
+      ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * originX, dpr * originY);
+      let view = {
+        left: px - w / 2 / scale - 8,
+        right: px + w / 2 / scale + 8,
+        top: py - h * SETTINGS.view.playerScreenY / scale - 8,
+        bottom: py + h * (1 - SETTINGS.view.playerScreenY) / scale + 8
+      };
+      drawArena(view, state), drawStains(), drawCorpses(state), drawDrops(state, alpha), drawHumans(state, alpha), drawWarnings(state, alpha), drawAttacks(state, px, py), drawParticles(), drawPlayer(state, px, py), ctx.setTransform(dpr, 0, 0, dpr, 0, 0), drawOverlays(state, input, w, h, phase);
+    }
+    return {
+      draw,
+      onEvent,
+      reset,
+      setShake(value) {
+        shakeEnabled = value;
+      },
+      counts() {
+        return { particles: fx.particles.length, stains: fx.stains.length };
+      }
+    };
+  }
+
+  // src/audio/audio.js
+  var SOUNDS = {
+    swipe: { gain: 0.1, gap: 0.08, priority: 1 },
+    hit: { gain: 0.14, gap: 0.05, priority: 1 },
+    kill: { gain: 0.2, gap: 0.05, priority: 2 },
+    pickup: { gain: 0.07, gap: 0.035, priority: 3 },
+    hurt: { gain: 0.34, gap: 0.1, priority: 5 },
+    windup: { gain: 0.045, gap: 0.09, priority: 2 },
+    aim: { gain: 0.05, gap: 0.15, priority: 2 },
+    arrow: { gain: 0.08, gap: 0.06, priority: 2 },
+    levelup: { gain: 0.17, gap: 0.3, priority: 5 },
+    card: { gain: 0.14, gap: 0.1, priority: 4 },
+    bell: { gain: 0.2, gap: 0.8, priority: 4 },
+    escape: { gain: 0.1, gap: 0.5, priority: 3 },
+    scream: { gain: 0.035, gap: 0.3, priority: 1 },
+    nova: { gain: 0.2, gap: 0.2, priority: 3 },
+    lance: { gain: 0.05, gap: 0.08, priority: 1 },
+    mist: { gain: 0.1, gap: 0.3, priority: 3 },
+    heart: { gain: 0.22, gap: 0.2, priority: 4 },
+    dawn: { gain: 0.24, gap: 2, priority: 6 },
+    dead: { gain: 0.3, gap: 2, priority: 6 }
+  };
+  function createAudio() {
+    let ctx = null, master = null, noiseBuffer = null, enabled = !0, voices = 0, last = {}, counts = {}, ladder = 0, ladderAt = 0, heartIn = 0;
+    function now() {
+      return ctx ? ctx.currentTime : 0;
+    }
+    function unlock() {
+      if (enabled)
+        try {
+          if (!ctx) {
+            let AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC)
+              return;
+            ctx = new AC(), master = ctx.createGain(), master.gain.value = SETTINGS.audio.master;
+            let squeeze = ctx.createDynamicsCompressor();
+            master.connect(squeeze), squeeze.connect(ctx.destination);
+            let length = Math.floor(ctx.sampleRate * 0.5);
+            noiseBuffer = ctx.createBuffer(1, length, ctx.sampleRate);
+            let data = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < length; i++)
+              data[i] = Math.random() * 2 - 1;
+          }
+          ctx.state !== "running" && ctx.resume();
+        } catch {
+          ctx = null;
+        }
+    }
+    function envelope(gain, attack, hold) {
+      let g = ctx.createGain(), t = now();
+      return g.gain.setValueAtTime(1e-4, t), g.gain.linearRampToValueAtTime(gain, t + attack), g.gain.exponentialRampToValueAtTime(1e-4, t + attack + hold), g.connect(master), g;
+    }
+    function track(node, seconds) {
+      voices++, node.onended = () => {
+        voices--;
+      }, node.start(), node.stop(now() + seconds + 0.02);
+    }
+    function tone(type, from, to, seconds, gain, delay) {
+      let osc = ctx.createOscillator(), t = now() + (delay || 0);
+      osc.type = type, osc.frequency.setValueAtTime(from, t), osc.frequency.exponentialRampToValueAtTime(Math.max(20, to), t + seconds);
+      let g = ctx.createGain();
+      g.gain.setValueAtTime(1e-4, t), g.gain.linearRampToValueAtTime(gain, t + 6e-3), g.gain.exponentialRampToValueAtTime(1e-4, t + seconds), g.connect(master), osc.connect(g), voices++, osc.onended = () => {
+        voices--;
+      }, osc.start(t), osc.stop(t + seconds + 0.02);
+    }
+    function noise(filterType, from, to, seconds, gain) {
+      let src = ctx.createBufferSource();
+      src.buffer = noiseBuffer;
+      let filter = ctx.createBiquadFilter();
+      filter.type = filterType, filter.frequency.setValueAtTime(from, now()), filter.frequency.exponentialRampToValueAtTime(Math.max(30, to), now() + seconds), filter.Q.value = 0.9;
+      let g = envelope(gain, 4e-3, seconds);
+      src.connect(filter), filter.connect(g), track(src, seconds);
+    }
+    function bell(base, seconds, gain) {
+      let partials = [1, 2, 2.76, 5.4], weights = [1, 0.6, 0.4, 0.2];
+      for (let i = 0; i < partials.length; i++)
+        tone("sine", base * partials[i], base * partials[i] * 0.995, seconds / (1 + i * 0.5), gain * weights[i], 0);
+    }
+    function play(name, detail) {
+      if (counts[name] = (counts[name] || 0) + 1, !enabled || !ctx || ctx.state !== "running")
+        return;
+      let def = SOUNDS[name], t = now();
+      if (last[name] !== void 0 && t - last[name] < def.gap || voices >= SETTINGS.audio.maxVoices && def.priority < 4)
+        return;
+      last[name] = t;
+      let g = def.gain, vary = 1 + (Math.random() - 0.5) * 0.08;
+      name === "swipe" ? noise("bandpass", 2100 * vary, 600, 0.08, g) : name === "hit" ? tone("sine", 150 * vary, 70, 0.07, g) : name === "kill" ? (noise("lowpass", 900 * vary, 180, detail ? 0.2 : 0.13, g), tone("sine", 95 * vary, 42, 0.12, g * 0.9)) : name === "pickup" ? (t - ladderAt > 0.4 && (ladder = 0), ladderAt = t, tone("sine", 520 * Math.pow(2, ladder / 12), 520 * Math.pow(2, ladder / 12) * 1.02, 0.05, g), ladder = Math.min(14, ladder + 1)) : name === "hurt" ? (tone("square", 120, 52, 0.2, g * 0.6), noise("lowpass", 1400, 200, 0.16, g)) : name === "windup" ? tone("triangle", 880 * vary, 860, 0.03, g) : name === "aim" ? tone("sawtooth", 170, 250, 0.22, g * 0.5) : name === "arrow" ? noise("highpass", 2600, 5200, 0.07, g) : name === "levelup" ? (tone("triangle", 440, 440, 0.12, g, 0), tone("triangle", 554, 554, 0.12, g, 0.09), tone("triangle", 659, 659, 0.22, g, 0.18)) : name === "card" ? tone("triangle", 659, 880, 0.1, g) : name === "bell" ? bell(196, 1.8, g) : name === "escape" ? bell(330, 0.9, g) : name === "scream" ? tone("sawtooth", 720 * vary, 390, 0.17, g) : name === "nova" ? (noise("lowpass", 1800, 120, 0.2, g), tone("sine", 84, 40, 0.2, g)) : name === "lance" ? tone("sine", 900 * vary, 380, 0.07, g) : name === "mist" ? noise("bandpass", 500, 2400, 0.3, g) : name === "heart" ? (tone("sine", 62, 44, 0.09, g, 0), tone("sine", 58, 40, 0.09, g * 0.8, 0.16)) : name === "dawn" ? bell(147, 3.2, g) : name === "dead" && (tone("sawtooth", 110, 36, 0.8, g * 0.5), noise("lowpass", 600, 60, 0.7, g));
+    }
+    function onEvent(e) {
+      let type = e.type;
+      type === "swipe" || type === "hit" || type === "hurt" || type === "windup" || type === "aim" || type === "arrow" ? play(type) : type === "kill" ? play("kill", e.gib) : type === "pickup" ? play("pickup") : type === "levelup" ? play("levelup") : type === "card" ? play("card") : type === "stage" ? e.banner && play("bell") : type === "alarm" ? play("bell") : type === "escape" ? play("escape") : type === "scream" ? play("scream") : (type === "nova" || type === "lance" || type === "mist" || type === "dawn" || type === "dead") && play(type);
+    }
+    function update(state, dt, playing) {
+      if (!state || !playing || state.over)
+        return;
+      let p = state.player, ratio = p.blood / p.maxBlood;
+      if (ratio >= SETTINGS.player.lowBlood) {
+        heartIn = 0;
+        return;
+      }
+      heartIn -= dt, heartIn <= 0 && (play("heart"), heartIn = 0.45 + 0.55 * (ratio / SETTINGS.player.lowBlood));
+    }
+    return {
+      unlock,
+      onEvent,
+      update,
+      play,
+      counts,
+      setEnabled(value) {
+        enabled = value, !value && ctx && ctx.state === "running" ? ctx.suspend() : value && unlock();
+      },
+      isEnabled() {
+        return enabled;
+      },
+      suspend() {
+        ctx && ctx.state === "running" && ctx.suspend();
+      },
+      resume() {
+        enabled && ctx && ctx.state !== "running" && ctx.resume();
+      }
+    };
+  }
+
+  // src/app/main.js
+  var VERSION = "0.1.0", SAVE_KEY = "vampire-no-survivors.settings.v1", STEP = 1 / SETTINGS.stepsPerSecond;
+  function loadPrefs() {
+    let prefs = { sound: !0, shake: !0 };
+    try {
+      let raw = localStorage.getItem(SAVE_KEY);
+      if (raw) {
+        let saved = JSON.parse(raw);
+        prefs.sound = saved.sound !== !1, prefs.shake = saved.shake !== !1;
+      }
+    } catch {
+    }
+    return prefs;
+  }
+  function savePrefs(prefs) {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(prefs));
+    } catch {
+    }
+  }
+  function boot() {
+    let app = document.getElementById("app"), canvas = document.getElementById("stage"), touch = document.getElementById("touch"), params = new URLSearchParams(""), forced = params.get("insets") ? params.get("insets").split(",").map(Number) : null, prefs = loadPrefs(), screen = createScreen(canvas, app, {
+      dprCap: SETTINGS.view.dprCap,
+      uprightAspect: SETTINGS.view.uprightAspect,
+      viewWidth: SETTINGS.view.width,
+      viewHeightWide: SETTINGS.view.heightWide,
+      forcedInsets: forced
+    }), input = createInput(touch, SETTINGS.input), renderer = createRenderer(canvas, screen), audio = createAudio();
+    audio.setEnabled(prefs.sound), renderer.setShake(prefs.shake);
+    let state = null, phase = "title", paused = !1, mode = MODES[0], seed = 1, bot = null, speed = 1, readyT = 0, endT = 0, perf = { frames: 0, sumMs: 0, worstMs: 0, peakHumans: 0 }, errors = [];
+    window.addEventListener("error", (e) => errors.push(String(e.message)));
+    let ui = createUi(
+      app,
+      {
+        onStart(m) {
+          audio.unlock(), startNight(m);
+        },
+        onCard(index) {
+          phase === "levelup" && (chooseCard(state, index), handleEvents(), ui.hideCards(), phase = "play", input.setEnabled(!0));
+        },
+        onPause() {
+          setPaused(!0);
+        },
+        onResume() {
+          setPaused(!1);
+        },
+        onRestart() {
+          startNight(mode);
+        },
+        onQuit() {
+          paused = !1, loop.setPaused(!1), state = null, phase = "title", renderer.reset(), ui.showTitle();
+        },
+        onToggleSound() {
+          prefs.sound = !prefs.sound, audio.setEnabled(prefs.sound), savePrefs(prefs), ui.setToggles(prefs.sound, prefs.shake);
+        },
+        onToggleShake() {
+          prefs.shake = !prefs.shake, renderer.setShake(prefs.shake), savePrefs(prefs), ui.setToggles(prefs.sound, prefs.shake);
+        }
+      },
+      VERSION
+    );
+    ui.setToggles(prefs.sound, prefs.shake);
+    function startNight(m, forcedSeed) {
+      mode = m, seed = forcedSeed !== void 0 ? forcedSeed : Math.random() * 1e9 | 0, state = createSim(mode, seed), renderer.reset(), ui.startNight(mode), ui.showHint(SETTINGS.modes[mode].hint, SETTINGS.feel.hintSeconds), phase = "ready", paused = !1, readyT = 0, perf.frames = 0, perf.sumMs = 0, perf.worstMs = 0, perf.peakHumans = 0, loop.setPaused(!1), input.setEnabled(!0), navigator.wakeLock && navigator.wakeLock.request && navigator.wakeLock.request("screen").catch(() => {
+      });
+    }
+    function setPaused(value) {
+      phase === "title" || phase === "end" || phase === "levelup" || (paused = value, loop.setPaused(value), value ? (input.cancelAll(), ui.showPause()) : (ui.hidePause(), audio.resume()));
+    }
+    function handleEvents() {
+      let events = state.events;
+      for (let i = 0; i < events.length; i++) {
+        let e = events[i];
+        renderer.onEvent(e), audio.onEvent(e), e.type === "hurt" ? loop.freeze(SETTINGS.feel.hitStopHurt) : e.type === "kill" && e.tough ? loop.freeze(SETTINGS.feel.hitStopKillTough) : (e.type === "stage" || e.type === "alarm") && e.banner && ui.showBanner(e.banner);
+      }
+      events.length = 0;
+    }
+    function report() {
+      let sc = screen.state, st = state.stats, avg = perf.frames > 0 ? perf.sumMs / perf.frames : 0;
+      return [
+        "Vampire: No Survivors v" + VERSION,
+        "Variation: " + mode + " | seed " + seed,
+        "Result: " + state.result + (state.cause ? " (" + state.cause + ")" : "") + " at " + state.t.toFixed(1) + " s",
+        "Level " + state.player.level + " | kills " + st.kills + " | escaped " + st.escapes + " | hits taken " + st.hitsTaken,
+        "Powers: " + (st.cards.join(", ") || "none"),
+        "First kill " + st.firstKillT.toFixed(1) + " s | first card " + st.firstLevelT.toFixed(1) + " s | low blood " + st.lowBloodTime.toFixed(0) + " s",
+        "Screen " + sc.cssW + "x" + sc.cssH + " @" + sc.dpr + " | insets " + sc.insets.top + "/" + sc.insets.right + "/" + sc.insets.bottom + "/" + sc.insets.left,
+        "Frames: average " + avg.toFixed(1) + " ms, worst " + perf.worstMs.toFixed(0) + " ms | most humans " + st.peakHumans,
+        "Device: " + navigator.userAgent
+      ].join(`
+`);
+    }
+    function showEnd() {
+      phase = "end", input.setEnabled(!1), ui.showEnd({
+        result: state.result,
+        cause: state.cause,
+        mode,
+        t: state.t,
+        kills: state.stats.kills,
+        escapes: state.stats.escapes,
+        level: state.player.level,
+        hits: state.recentHits,
+        powers: Object.keys(state.player.powers).map((id) => SETTINGS.powers[id].name + " " + state.player.powers[id]).join(", "),
+        report: report()
+      });
+    }
+    function step() {
+      if (!state) {
+        input.endStep();
+        return;
+      }
+      if (phase === "ready" && (readyT += STEP, (Math.abs(input.state.mx) + Math.abs(input.state.my) > 0.05 || bot || readyT > 4) && (phase = "play")), phase === "play")
+        for (let n = 0; n < speed; n++) {
+          if (stepSim(state, bot ? bot.act(state) : input.state), handleEvents(), state.offer)
+            if (bot)
+              chooseCard(state, bot.pick(state)), handleEvents();
+            else {
+              phase = "levelup", input.setEnabled(!1), ui.showCards(state.offer, state.player.level - state.pendingLevels + 1);
+              break;
+            }
+          if (state.over) {
+            phase = "ending", endT = state.result === "dead" ? 1.2 : 1.8;
+            break;
+          }
+        }
+      else phase === "ending" && (endT -= STEP, endT <= 0 && showEnd());
+      input.endStep();
+    }
+    let debugIn = 0, slowFor = 0;
+    function watchSpeed(elapsed) {
+      loop.stats.avgMs > 22 ? slowFor += elapsed : slowFor = 0, slowFor > 2 && screen.state.dprCap > 1 && (slowFor = 0, screen.setDprCap(Math.max(1, screen.state.dprCap - 0.5)));
+    }
+    function draw(alpha, elapsed) {
+      let still = phase === "levelup" || paused || phase === "end";
+      if (renderer.draw(state, phase, still ? 1 : alpha, elapsed, input.state), ui.update(state), audio.update(state, elapsed, phase === "play" && !paused), phase === "play" && !paused && state.t > 1 && (watchSpeed(elapsed), perf.frames++, perf.sumMs += loop.stats.frameMs, loop.stats.frameMs > perf.worstMs && (perf.worstMs = loop.stats.frameMs)), debugIn -= elapsed, debugIn <= 0) {
+        debugIn = 0.5;
+        let sc = screen.state;
+        ui.setDebug(
+          "v" + VERSION + " " + (state ? mode : "title") + " " + sc.cssW + "x" + sc.cssH + "@" + sc.dpr + " in " + sc.insets.top + "/" + sc.insets.right + "/" + sc.insets.bottom + "/" + sc.insets.left + " " + loop.stats.avgMs.toFixed(1) + "ms" + (state ? " h" + state.humans.length : "")
+        );
+      }
+    }
+    let loop = createLoop({ stepsPerSecond: SETTINGS.stepsPerSecond, maxStepsPerFrame: 5, step, draw });
+    document.addEventListener("visibilitychange", () => {
+      document.hidden ? (audio.suspend(), (phase === "play" || phase === "ready") && setPaused(!0)) : paused || audio.resume();
+    }), window.addEventListener("keydown", (e) => {
+      phase === "levelup" && (e.key === "1" || e.key === "2" || e.key === "3") ? document.querySelectorAll(".screen-cards .card")[Number(e.key) - 1].click() : (e.key === "Escape" || e.key === "p") && setPaused(!paused);
+    }), window.addEventListener("pointerdown", () => audio.unlock(), { once: !0 }), ui.showTitle(), loop.start();
+  }
+  boot();
+})();
+
+</script>

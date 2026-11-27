@@ -18,6 +18,7 @@ async function bundle(test) {
     target: ["safari15", "chrome100"],
     write: false,
     minify: false,
+    minifySyntax: true, // removes the test-only branches from the playing build
     legalComments: "none",
     define: {
       __TEST__: test ? "true" : "false",
