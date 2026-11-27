@@ -61,13 +61,13 @@ details[open] summary::after{content:"\2212"}
    above the bottom sheet, or over the drawer when the screen is too narrow to share. */
 body.panel-open .overlay{right:calc(min(330px,88vw) + env(safe-area-inset-right,0px))}
 @media (orientation:landscape) and (max-width:700px){
-  body.panel-open .overlay{right:0;z-index:46}
+  body.panel-open .overlay{right:0;z-index:46;background:rgba(6,8,16,.9)}
 }
 @media (orientation:portrait) and (max-width:720px){
   #panel{top:auto;left:0;right:0;bottom:0;width:auto;height:46%;border-left:none;border-top:1px solid rgba(255,255,255,.16);
     transform:translateY(105%);padding:10px 0 env(safe-area-inset-bottom,0px) 0}
   #panel.open{transform:none}
-  body.panel-open .overlay{right:0;bottom:46%;justify-content:flex-start}   /* little room above the sheet: start from the top and scroll */
+  body.panel-open .overlay{right:0;bottom:46%;justify-content:flex-start;background:rgba(6,8,16,.88)}   /* little room above the sheet: start from the top and scroll */
 }
 
 /* ---------- overlays ---------- */
@@ -225,28 +225,65 @@ function setSetting(k, v, fromUI) {
 function resetSettings() {
   for (const grp of SETTING_GROUPS) for (const it of grp.items) setSetting(it.k, it.d, false);
 }
+// A finger that lands on a list while it is still gliding only stops the list: it must not press anything in it.
+let scrolledAt = -1e9, scrolledEl = null;
+document.addEventListener('scroll', e => { scrolledAt = performance.now(); scrolledEl = e.target; }, { capture: true, passive: true });
+const gliding = el => performance.now() - scrolledAt < 120 && !!scrolledEl && scrolledEl.contains(el);
 // Tap handler for buttons. A plain 'click' is never sent for a second finger while another one is
-// steering, so touch taps are taken from pointerup; touchend then cancels the click the browser would add.
+// steering, so finger and pen taps are taken from pointerup; the click the browser may add is dropped.
 // own: the handler does the element's whole job (toggle rows, section headers), so the native action is cancelled.
 function onTap(el, fn, own) {
-  let id = -1, x = 0, y = 0;
-  el.addEventListener('pointerdown', e => { id = e.pointerId; x = e.clientX; y = e.clientY; });
+  let id = -1, x = 0, y = 0, done = -1e9, tid = -1, tx = 0, ty = 0, seen = false;
+  const fire = e => { done = performance.now(); fn(e); };
+  el.addEventListener('pointerdown', e => { id = gliding(el) ? -1 : e.pointerId; x = e.clientX; y = e.clientY; });
   el.addEventListener('pointerup', e => {
-    if (e.pointerType !== 'touch' || e.pointerId !== id) return;
-    id = -1;
-    if (Math.hypot(e.clientX - x, e.clientY - y) <= 12) fn(e);
+    if (e.pointerType === 'mouse' || e.pointerId !== id) return;
+    id = -1; seen = true;
+    if (Math.hypot(e.clientX - x, e.clientY - y) <= 12) fire(e);
   });
-  el.addEventListener('touchend', e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
-  el.addEventListener('click', e => { if (own) e.preventDefault(); fn(e); });
+  el.addEventListener('pointercancel', e => { if (e.pointerId === id) id = -1; seen = true; });
+  // The same tap read from touch events, for a finger the browser sends no pointer events for
+  // (a second finger while the first one is scrolling something, or a browser without them).
+  el.addEventListener('touchstart', e => { const t = e.changedTouches[0]; tid = gliding(el) ? -1 : t.identifier; tx = t.clientX; ty = t.clientY; seen = false; }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (e.cancelable) e.preventDefault();
+    const t = e.changedTouches[0];
+    if (!seen && t.identifier === tid && Math.hypot(t.clientX - tx, t.clientY - ty) <= 12) { id = -1; fire(e); }
+    tid = -1;
+  }, { passive: false });
+  el.addEventListener('touchcancel', () => { tid = -1; });
+  el.addEventListener('click', e => { if (own) e.preventDefault(); if (performance.now() - done >= 700) fn(e); });
+}
+// While one thumb steers on the playfield the browser will not scroll a list for the other one, so a finger that
+// drags up or down scrolls it by hand. When the browser scrolls by itself it cancels the pointer first, and it
+// does that well inside SCROLL_AT pixels of travel, so the two never both move the list.
+const SCROLL_AT = 24;
+function handScroll(el) {
+  let id = -1, x = 0, y = 0, on = false;
+  el.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') { id = e.pointerId; x = e.clientX; y = e.clientY; on = false; } });
+  el.addEventListener('pointermove', e => {
+    if (e.pointerId !== id) return;
+    if (!on) {
+      const dx = Math.abs(e.clientX - x), dy = Math.abs(e.clientY - y);
+      if (Math.max(dx, dy) <= SCROLL_AT) return;
+      if (dy <= dx) { id = -1; return; }
+      on = true; y = e.clientY;
+    }
+    el.scrollTop -= e.clientY - y; y = e.clientY;
+  });
+  const end = e => { if (e.pointerId === id) id = -1; };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
 }
 function buildPanel(extraButtons) {
   const body = $('panelBody');
+  handScroll(body); handScroll($('levelup')); handScroll($('gameover'));
   for (const grp of SETTING_GROUPS) {
     const det = document.createElement('details');
     det.open = !!grp.open;
     const sum = document.createElement('summary');
     sum.textContent = grp.g;
-    onTap(sum, () => { det.open = !det.open; }, true);
+    onTap(sum, () => { det.open = !det.open; sum.blur(); }, true);
     det.appendChild(sum);
     for (const it of grp.items) {
       const row = document.createElement('label');
@@ -267,14 +304,27 @@ function buildPanel(extraButtons) {
         input.type = 'range'; input.min = it.min; input.max = it.max; input.step = it.step; input.value = it.d;
         input.setAttribute('aria-label', it.n);
         row.appendChild(nm); row.appendChild(out); row.appendChild(input);
-        input.addEventListener('input', () => setSetting(it.k, parseFloat(input.value), true));
-        // A touch that turns into a scroll of the list must not leave the slider where the finger landed.
-        let before = it.d;
-        input.addEventListener('pointerdown', () => { before = S[it.k]; });
-        input.addEventListener('pointercancel', () => setSetting(it.k, before, false));
+        // A touch that scrolls the list, or only stops it gliding, must not leave the slider where the finger landed.
+        let before = it.d, skip = false, sx = 0, sy = 0, aimed = false, downAt = -1e9;
+        const undo = () => { skip = true; setSetting(it.k, before, false); };
+        const start = (x, y, glide) => { before = S[it.k]; skip = glide; aimed = false; sx = x; sy = y; };
+        const aim = (x, y) => {                                         // a finger that sets off up or down is scrolling (see handScroll)
+          if (skip || aimed) return;
+          const dx = Math.abs(x - sx), dy = Math.abs(y - sy);
+          if (Math.max(dx, dy) > SCROLL_AT) { aimed = true; if (dy > dx) undo(); }
+        };
+        input.addEventListener('input', () => { if (skip) input.value = before; else setSetting(it.k, parseFloat(input.value), true); });
+        input.addEventListener('pointerdown', e => { downAt = performance.now(); start(e.clientX, e.clientY, e.pointerType !== 'mouse' && gliding(input)); });
+        input.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse') aim(e.clientX, e.clientY); });
+        input.addEventListener('pointercancel', undo);
+        // The same from touch events, for a finger the browser sends no pointer events for (see onTap).
+        input.addEventListener('touchstart', e => { const t = e.changedTouches[0]; if (performance.now() - downAt > 50) start(t.clientX, t.clientY, gliding(input)); }, { passive: true });
+        input.addEventListener('touchmove', e => { const t = e.changedTouches[0]; aim(t.clientX, t.clientY); }, { passive: true });
+        input.addEventListener('touchend', () => { skip = false; });
+        input.addEventListener('keydown', () => { skip = false; });
         // Drop focus after a drag so arrow keys go back to moving the hero.
         input.addEventListener('change', () => input.blur());
-        input.addEventListener('pointerup', () => input.blur());
+        input.addEventListener('pointerup', () => { skip = false; input.blur(); });
       }
       settingRows[it.k] = { def: it, input, out, row };
       det.appendChild(row);
@@ -659,7 +709,7 @@ function star(g, n, r1, r2, rot) {
 }
 const UPG = [
   { id: 'pulse', name: 'Pulse', kind: 'weapon', color: '#5fe3ff', max: 5,
-    desc: ['Fires a bolt at the nearest enemy.', 'Twin shot: 2 bolts, each at its own target.', 'Bolts pierce two enemies, hit 50% harder and fire a little faster.', 'Triple shot and faster firing.', 'SPLINTER: every bolt bursts into 3 shards on impact.'],
+    desc: ['Fires a bolt at the nearest enemy.', 'Twin shot: 2 bolts, each at its own target.', 'Bolts pierce two enemies, hit 50% harder and fire a little faster.', 'Triple shot and faster firing.', 'SPLINTER: every bolt bursts into 3 shards on its first hit and keeps flying.'],
     icon(g) { g.strokeStyle = this.color; g.lineWidth = 6; g.lineCap = 'round';
       for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(-14 + i * 3, 12 + i * 11); g.lineTo(8 + i * 3, -6 + i * 11); g.stroke(); } } },
   { id: 'halo', name: 'Halo', kind: 'weapon', color: '#f2fbff', max: 5,
@@ -689,8 +739,8 @@ const UPG = [
     desc: ['15% of hits are critical: 2.5× damage and twice the shove.', '30% critical hits.', '45% critical hits.', '60% critical hits.'],
     icon(g) { g.strokeStyle = this.color; g.lineWidth = 4; g.beginPath(); g.arc(0, 0, 14, 0, TAU); g.stroke();
       g.beginPath(); g.moveTo(-23, 0); g.lineTo(-8, 0); g.moveTo(8, 0); g.lineTo(23, 0); g.moveTo(0, -23); g.lineTo(0, -8); g.moveTo(0, 8); g.lineTo(0, 23); g.stroke(); } },
-  { id: 'slip', name: 'Slipstream', kind: 'passive', color: '#7dffe6', max: 4,
-    desc: ['Move 9% faster and leave a searing trail. Run rings around the swarm.', 'Faster again; the trail lasts longer and burns hotter.', 'Faster again; the trail lasts longer and burns hotter.', 'LASSO: draw a closed loop with your trail to detonate everything caught inside it.'],
+  { id: 'slip', name: 'Slipstream', kind: 'passive', color: '#7dffe6', max: 2,
+    desc: ['Move 18% faster and leave a searing trail. Run rings around the swarm.', 'LASSO: faster again, and a closed loop of trail detonates everything caught inside it.'],
     icon(g) { g.strokeStyle = this.color; g.lineCap = 'round'; g.lineWidth = 5; g.globalAlpha = .9;
       g.beginPath(); g.moveTo(-22, 12); g.quadraticCurveTo(-8, 14, 4, 0); g.stroke(); g.globalAlpha = 1;
       g.fillStyle = '#fff'; g.beginPath(); g.arc(10, -7, 9, 0, TAU); g.fill(); } },
@@ -717,7 +767,7 @@ for (const u of UPG) UPG_BY_ID[u.id] = u;
 
 /* ============================ 7. SIMULATION ========================== */
 let G = null, paused = false, everPlayed = false;
-const player = { x: 0, y: 0, vx: 0, vy: 0, hp: BASE_HP, iframe: 0, face: 0, pop: 0, kick: 0, still: 0, bloom: 0 };
+const player = { x: 0, y: 0, vx: 0, vy: 0, hp: BASE_HP, iframe: 0, face: 0, pop: 0, kick: 0, still: 0, bloom: 0, act: 1 };
 const st = { rate: 1, extra: 0, crit: 0, speed: 1, magnet: 1, hpBonus: 0, dmg: 1 };   // stats derived from upgrades
 const lv = {};                       // upgrade id -> level
 let wp = null;                       // weapon timers
@@ -734,7 +784,9 @@ const maxHpBase = () => BASE_HP + st.hpBonus;      // player.hp is stored unscal
 const hpScale = () => { const m = G.diff / 60, base = 1 + m * .5 + m * m * .08; return m > 5 ? base * Math.pow(1.25, m - 5) : base; };
 const OVERTIME = 600;                                // at 10:00 the swarm enrages and keeps accelerating: nobody lasts forever
 const spdScale = () => 1 + Math.min(.45, G.diff / 480 * .45) + Math.max(0, (G.diff - OVERTIME) / 60);
-const kbScale = () => 1 / (1 + G.diff / 240);      // enemies get heavier, so knockback alone cannot hold the line forever
+// Enemies get heavier, so knockback alone cannot hold the line forever; it also fades for a hero who has
+// hardly moved lately (player.act), so standing in one spot behind Shockwave is not a way to play.
+const kbScale = () => (1 - .7 * clamp((.3 - player.act) / .2, 0, 1)) / (1 + G.diff / 240);
 const dmgScale = () => 1 + G.diff / 420;
 const xpFor = L => { const k = L - 1; return Math.floor(5 + 4.5 * k + 1.5 * k * k); };
 // Stand still for a moment and the pickup field blooms by 60%: stopping is a small, greedy gamble, never a plan.
@@ -744,7 +796,7 @@ function recalc() {
   st.rate = 1 + .18 * lv.overclock;
   st.extra = lv.echo;
   st.crit = .15 * lv.deadeye;
-  st.speed = 1 + .09 * lv.slip;
+  st.speed = 1 + .18 * lv.slip;
   st.magnet = 1 + .5 * lv.magnet;
   st.hpBonus = 25 * lv.shell;
   st.dmg = 1 + .08 * G.overdrive;
@@ -766,7 +818,7 @@ function newGame() {
         deadT: 0, banner: null, overdrive: 0, owned: ['pulse'], dmgBy: {}, overtime: false };
   recalc();
   player.x = player.y = player.vx = player.vy = 0;
-  player.hp = maxHpBase(); player.iframe = 0; player.face = -Math.PI / 2; player.pop = 0; player.kick = 0; player.still = 0; player.bloom = 0;
+  player.hp = maxHpBase(); player.iframe = 0; player.face = -Math.PI / 2; player.pop = 0; player.kick = 0; player.still = 0; player.bloom = 0; player.act = 1;
   wp = { pulseT: .12, haloA: 0, waveT: .6, sparkT: .5, trailT: 0, tx: 0, ty: 0 };
   cam.trauma = 0; updateCamera(0, 0, 0, true);
   // Opening ring: targets on screen from the first frame, so the first kill lands inside a second.
@@ -778,7 +830,8 @@ function newGame() {
   setPaused(false);
   hideOverlays();
   joy.ox = joy.x; joy.oy = joy.y;                                       // a thumb still resting on the glass starts the new run centred
-  if (!adaptOff && !retried && dprCap < 2) { retried = true; dprCap = 2; resize(); }   // one fresh try at full sharpness after a slow patch
+  // Full sharpness again for the calm start of a run, unless the last drop came in a calm start itself.
+  if (!adaptOff && dprCap < 2 && dropAt > 45) { dprCap = 2; sinceUp = 0; upN = 0; resize(); }
 }
 
 // ---------- enemies
@@ -1087,6 +1140,7 @@ function updatePlayer(dt) {
   if (player.kick > 0) player.kick -= dt;
   const moving = player.vx * player.vx + player.vy * player.vy > 900;
   player.still = moving ? 0 : player.still + dt;
+  player.act += ((moving ? 1 : 0) - player.act) * (1 - Math.exp(-dt / 6));   // share of the last few seconds spent moving
   const want = player.still > .3 ? 1 : 0;
   player.bloom += (want - player.bloom) * (1 - Math.exp(-(want ? 3.5 : 14) * dt));
   const mh = maxHpBase();
@@ -1165,7 +1219,7 @@ function updateBolts(dt) {
         if (b.split) {
           const a = Math.atan2(ny, nx);
           for (let s = -1; s <= 1; s++) fireBolt(b.x, b.y, a + s * .48 + rnd(-.08, .08), b.dmg * .5, 0, false, true, e.uid);
-          b.life = 0; break;
+          b.split = false;                                             // shards burst out once; the bolt itself flies on
         }
         if (b.pierce-- <= 0) { b.life = 0; break; }
       }
@@ -1258,7 +1312,7 @@ function updateSpark(dt, L) {
   if (any) { wp.sparkT = L.cd; addShake(.05); }
   else wp.sparkT = .08;
 }
-const TRAIL_LIFE = [0, 1.2, 1.5, 1.8, 2.6];
+const TRAIL_LIFE = [0, 1.8, 2.6];
 function segHit(a, b, c, d) {
   const d1 = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x), d2 = (b.x - a.x) * (d.y - a.y) - (b.y - a.y) * (d.x - a.x);
   const d3 = (d.x - c.x) * (a.y - c.y) - (d.y - c.y) * (a.x - c.x), d4 = (d.x - c.x) * (b.y - c.y) - (d.y - c.y) * (b.x - c.x);
@@ -1310,14 +1364,14 @@ function updateTrail(dt, L) {
   const dx = player.x - wp.tx, dy = player.y - wp.ty;
   if (dx * dx + dy * dy > 15 * 15) {
     trail.push({ x: player.x, y: player.y, t: 0, life }); wp.tx = player.x; wp.ty = player.y;
-    if (L >= 4) tryLasso();
+    if (L >= 2) tryLasso();
   }
   for (let i = 0; i < trail.length; i++) trail[i].t += dt;
   while (trail.length && trail[0].t >= trail[0].life) trail.shift();
   wp.trailT -= dt;
   if (wp.trailT > 0) return;
   wp.trailT = .1;
-  const dmg = DMG(5 + 5 * L), r = 13 * AREA();
+  const dmg = DMG(10 + 12 * L), r = 24 * AREA();
   for (let i = 0; i < trail.length - 1; i++) {
     const nd = trail[i];
     const n = queryCircle(nd.x, nd.y, r, Q1);
@@ -1520,14 +1574,21 @@ function drawGround() {
     }
   }
   if (trail.length) {
-    ctx.strokeStyle = '#7dffe6'; ctx.lineCap = 'round';
+    const join = ctx.lineJoin;
+    ctx.strokeStyle = '#7dffe6'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // A soft wide band for the strip that burns (one stroke, so it does not bead where pieces overlap)...
+    ctx.globalAlpha = .13; ctx.lineWidth = 30 * AREA();
+    ctx.beginPath(); ctx.moveTo(trail[0].x, trail[0].y);
+    for (let i = 1; i < trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
+    ctx.lineTo(player.x, player.y); ctx.stroke();
+    // ...and a bright core that fades with age.
     const w = 7 * AREA();
     for (let i = 0; i < trail.length; i++) {
       const a = trail[i], b = i + 1 < trail.length ? trail[i + 1] : player, k = 1 - a.t / a.life;
       ctx.globalAlpha = .15 + .65 * k; ctx.lineWidth = w * (.35 + .65 * k);
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     }
-    ctx.globalAlpha = 1; ctx.lineCap = 'butt';
+    ctx.globalAlpha = 1; ctx.lineCap = 'butt'; ctx.lineJoin = join;
   }
   for (let i = 0; i < lassos.length; i++) {
     const l = lassos[i], k = l.t / .4, pts = l.pts;
@@ -1696,7 +1757,7 @@ function drawZaps() {
   ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.6; ctx.stroke();
   ctx.lineCap = 'butt';
 }
-function outlinedText(txt, x, y) { ctx.strokeText(txt, x, y); ctx.fillText(txt, x, y); }
+function outlinedText(txt, x, y, mw) { ctx.strokeText(txt, x, y, mw); ctx.fillText(txt, x, y, mw); }
 function drawIndicator(wx, wy, col, big) {
   const sx = (wx - cam.x) * VS + W / 2 + offX, sy = (wy - cam.y) * VS + H / 2 + offY;
   const m = 26;
@@ -1767,9 +1828,9 @@ function drawHUD(rdt) {
     ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(11,14,23,.85)';
     ctx.font = '800 20px ' + FONT; ctx.fillStyle = '#ffffff';
     const hy = (H + 2 * offTY) * .74;
-    outlinedText(IS_COARSE ? 'Drag anywhere to move' : roomX < 330 ? 'WASD / arrows to move' : 'WASD or arrow keys to move', midX, hy);
+    outlinedText(IS_COARSE ? 'Drag anywhere to move' : roomX < 330 ? 'WASD / arrows to move' : 'WASD or arrow keys to move', midX, hy, roomX - 16);
     ctx.font = '600 14px ' + FONT; ctx.fillStyle = '#b9c5de'; ctx.lineWidth = 4;
-    outlinedText(IS_COARSE || roomX < 400 ? 'You attack automatically' : 'You attack automatically · dragging works too', midX, hy + 26);
+    outlinedText(IS_COARSE || roomX < 400 ? 'You attack automatically' : 'You attack automatically · dragging works too', midX, hy + 26, roomX - 16);
     ctx.globalAlpha = 1;
   }
 }
@@ -1945,7 +2006,9 @@ buildPanel([
 
 /* ============================ 10. MAIN LOOP ========================== */
 let last = 0, fpsT = 0, fpsN = 0, lowFps = 0;
-let lowBest = 0, probeN = 0, probeBest = 0, probeFps = 0, probeCap = 2, adaptOff = false, retried = false;   // adaptive resolution: see frame()
+// adaptive resolution: see frame()
+let lowBest = 0, probeN = 0, probeBest = 0, probeFps = 0, probeCap = 2, adaptOff = false;
+let winOk = true, upN = 0, upWait = 20, sinceUp = 1e9, dropAt = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   if (!last) { last = now; render(0); return; }
@@ -1953,18 +2016,35 @@ function frame(now) {
   last = now;
   const rdt = clamp(raw, 0, .1);
 
+  if (G.state !== 'play' || paused) winOk = false;
   fpsT += raw; fpsN++;
   if (fpsT >= .5) {
-    fps = fpsN / fpsT; fpsText = Math.round(fps) + ' fps'; fpsT = 0; fpsN = 0;
+    // Only half-second windows spent wholly in play are judged: cards, a pause or a stalled tab say nothing.
+    const judged = winOk && fpsT < 1;
+    fps = fpsN / fpsT; fpsText = Math.round(fps) + ' fps'; fpsT = 0; fpsN = 0; winOk = true;
     // If the device cannot keep up, render at a lower pixel density rather than drop frames. Each drop is
     // checked over the next two seconds: if it bought no frame rate (a 30 Hz power-saving cap, say), it is undone
     // for good. Best windows are compared, because a stray hitch only ever makes a window look worse.
-    const playing = G.state === 'play' && !paused;
-    if (probeN > 0) {
-      if (playing) { probeBest = Math.max(probeBest, fps); if (--probeN === 0 && probeBest < probeFps * 1.15) { dprCap = probeCap; adaptOff = true; resize(); } }
-    } else if (!adaptOff && fps < 42 && playing) { lowFps++; lowBest = Math.max(lowBest, fps); }
-    else lowFps = lowBest = 0;
-    if (lowFps >= 4 && dprCap > 1) { probeFps = lowBest; probeCap = dprCap; dprCap = Math.max(1, dprCap - .5); lowFps = lowBest = 0; probeN = 4; probeBest = 0; resize(); }
+    if (judged) {
+      sinceUp++;
+      if (probeN > 0) {
+        probeBest = Math.max(probeBest, fps);
+        if (--probeN === 0 && probeBest < probeFps * 1.15) { dprCap = probeCap; adaptOff = true; resize(); }
+      } else if (!adaptOff && fps < 42) { lowFps++; lowBest = Math.max(lowBest, fps); upN = 0; }
+      else {
+        lowFps = lowBest = 0;
+        // A slow patch that ended by itself looks just like a drop that helped, so a kept drop is tried the other
+        // way after a spell of full frame rate: 10 s at first, longer each time, much longer if it was slow again at once.
+        if (!adaptOff && dprCap < 2 && fps > 55) {
+          if (++upN >= upWait) { upN = 0; upWait = Math.min(480, upWait * 2); sinceUp = 0; dprCap = Math.min(2, dprCap + .5); resize(); }
+        } else upN = 0;
+      }
+      if (lowFps >= 4 && dprCap > 1) {
+        if (sinceUp < 16) upWait = Math.min(480, upWait * 4);
+        dropAt = G.time;
+        probeFps = lowBest; probeCap = dprCap; dprCap = Math.max(1, dprCap - .5); lowFps = lowBest = 0; probeN = 4; probeBest = 0; resize();
+      }
+    }
   }
 
   readMove();
@@ -1994,9 +2074,9 @@ function frame(now) {
     const n = Math.min(8, Math.max(1, Math.ceil(simDt * 50)));         // sub-steps keep fast game speeds stable
     const h = simDt / n;
     // Crowd separation is the costliest part of a step. Up to the default enemy cap it runs every sub-step;
-    // far above it (the Max on screen slider) it runs once per frame, scaled to stand in for all of them.
-    const lite = enemies.length > 700;
-    for (let i = 0; i < n; i++) step(h, lite ? (i === n - 1 ? n : 0) : 1);
+    // far above it (the Max on screen slider) it runs on every second one, each pass standing in for two.
+    const lite = enemies.length > 700 && n > 1;
+    for (let i = 0; i < n; i++) step(h, lite ? ((n - 1 - i) % 2 ? 0 : 2) : 1);
     updateParticles(simDt); updateRings(simDt); updateDmgNums(simDt);
   }
   G.xpShown += (G.xp / G.xpNeed - G.xpShown) * (1 - Math.exp(-14 * rdt));
