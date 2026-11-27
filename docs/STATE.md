@@ -1,6 +1,6 @@
 # State
 
-**Paused for usage on 2026-11-27 at about 01:35 UTC; resumes after the window resets at 04:40 UTC.**
+**Paused by the owner on 2026-11-27. Do not resume until the owner asks.**
 The owner has given the verdict on v0.1.0 and asked for more. The plan below is decided; build it.
 
 - Playable page (private to the owner): https://claude.ai/artifact/WzD5dZGqBfymbxQTQ31huZ
