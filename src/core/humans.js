@@ -64,6 +64,18 @@ export function spawnAtGate(state, type, role, gateIndex, destGate) {
   if (state.humans.length >= S.limits.humans) {
     return null;
   }
+  if (type === "archer") {
+    let archers = 0;
+    for (let i = 0; i < state.humans.length; i++) {
+      if (state.humans[i].type === "archer" && !state.humans[i].dead) {
+        archers++;
+      }
+    }
+    if (archers >= S.limits.archers) {
+      type = "watchman";
+      role = "rush";
+    }
+  }
   const g = GATES[gateIndex];
   const out = 30 + state.rng.float() * 70;
   const along = (state.rng.float() - 0.5) * (S.arena.gateWidth - 36);

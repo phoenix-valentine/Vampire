@@ -412,8 +412,9 @@ export function createRenderer(canvas, screen) {
     for (let i = 0; i < humans.length; i++) {
       const h = humans[i];
       if (h.flash > 0 && !h.dead && !h.gone) {
-        ctx.moveTo(h.x + h.r * 1.2, h.y);
-        ctx.arc(h.x, h.y, h.r * 1.2, 0, TAU);
+        // Kept smaller than the vampire, so a flash is never mistaken for it.
+        ctx.moveTo(h.x + h.r * 0.85, h.y);
+        ctx.arc(h.x, h.y, h.r * 0.85, 0, TAU);
       }
     }
     ctx.fill();

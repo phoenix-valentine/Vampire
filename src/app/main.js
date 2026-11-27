@@ -347,6 +347,7 @@ function boot() {
           handleEvents();
         }
         phase = state.over ? "ending" : "play";
+        ui.clearText();
       },
       pause: setPaused,
     };

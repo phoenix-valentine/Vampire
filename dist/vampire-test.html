@@ -26,6 +26,12 @@
   color-scheme: dark;
 }
 
+/* A host page may pad the root for the notch and home bar. Counting that padding inside the
+   height keeps the game exactly one screen tall instead of spilling past the bottom. */
+html {
+  box-sizing: border-box;
+}
+
 html,
 body {
   height: 100%;
@@ -616,7 +622,9 @@ button:focus-visible {
     limits: {
       corpses: 90,
       drops: 220,
-      humans: 110
+      humans: 110,
+      archers: 7
+      // more aim lines than this cannot be read on a phone
     },
     modes: {
       slaughter: {
@@ -985,6 +993,12 @@ button:focus-visible {
   function spawnAtGate(state, type, role, gateIndex, destGate) {
     if (state.humans.length >= SETTINGS.limits.humans)
       return null;
+    if (type === "archer") {
+      let archers = 0;
+      for (let i = 0; i < state.humans.length; i++)
+        state.humans[i].type === "archer" && !state.humans[i].dead && archers++;
+      archers >= SETTINGS.limits.archers && (type = "watchman", role = "rush");
+    }
     let g = GATES[gateIndex], out = 30 + state.rng.float() * 70, along = (state.rng.float() - 0.5) * (SETTINGS.arena.gateWidth - 36), tx = -g.ny, ty = g.nx, h = makeHuman(state, type, role, g.x + g.nx * out + tx * along, g.y + g.ny * out + ty * along), inward = 40 + state.rng.float() * 70;
     return h.ai = "enter", h.tx = g.x - g.nx * inward + tx * along, h.ty = g.y - g.ny * inward + ty * along, h.gate = gateIndex, h.dest = destGate === void 0 ? -1 : destGate, state.humans.push(h), h;
   }
@@ -1732,7 +1746,7 @@ button:focus-visible {
     cards.appendChild(el("div", "spacer")), cards.appendChild(cardsTitle), cards.appendChild(cardsSub), cards.appendChild(cardsList);
     let cardsOpenAt = 0;
     function showCards(offer, level) {
-      cardsTitle.textContent = "LEVEL " + level, cardsList.textContent = "", cardsOpenAt = performance.now(), cardsList.classList.add("locked"), setTimeout(() => cardsList.classList.remove("locked"), SETTINGS.feel.cardLock * 1e3);
+      cardsTitle.textContent = "LEVEL " + level, cardsList.textContent = "", cardsOpenAt = performance.now(), hint.classList.remove("on"), hintUntil = 0, cardsList.classList.add("locked"), setTimeout(() => cardsList.classList.remove("locked"), SETTINGS.feel.cardLock * 1e3);
       for (let i = 0; i < offer.length; i++) {
         let card = offer[i], button = el("button", "btn card"), head = el("strong", "", card.name);
         card.level > 1 && head.appendChild(el("em", "", " level " + card.level)), button.appendChild(head), button.appendChild(el("span", "", card.text)), button.addEventListener("click", () => {
@@ -1768,7 +1782,7 @@ button:focus-visible {
         for (let i = 0; i < hits.length; i++)
           endHits.appendChild(el("li", "", clock(SETTINGS.run.seconds - hits[i].t) + " before dawn: " + (SOURCES[hits[i].source] || hits[i].source) + ", " + Math.round(hits[i].dmg) + " blood"));
       }
-      endStats.textContent = "", stat("Variation", SETTINGS.modes[data.mode].label), stat("Survived", clock(data.t) + " of " + clock(SETTINGS.run.seconds)), stat("Killed", String(data.kills)), data.mode === "hunt" && stat("Escaped", String(data.escapes)), stat("Level", String(data.level)), stat("Powers", data.powers || "none"), endButtons.textContent = "";
+      endStats.textContent = "", stat("Variation", SETTINGS.modes[data.mode].label), stat("Survived", clock(Math.min(data.t, SETTINGS.run.seconds)) + " of " + clock(SETTINGS.run.seconds)), stat("Killed", String(data.kills)), data.mode === "hunt" && stat("Escaped", String(data.escapes)), stat("Level", String(data.level)), stat("Powers", data.powers || "none"), endButtons.textContent = "";
       let again = el("button", "btn big", "Again");
       again.addEventListener("click", () => handlers.onStart(data.mode)), endButtons.appendChild(again);
       for (let i = 0; i < MODES.length; i++)
@@ -1782,7 +1796,7 @@ button:focus-visible {
           reportBox.hidden = !1, reportBox.focus(), reportBox.select(), copy.textContent = "Select the text below and copy it";
         };
         navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(data.report).then(done, fallback) : fallback();
-      }), endButtons.appendChild(copy), reportBox.hidden = !0, end.hidden = !1;
+      }), endButtons.appendChild(copy), reportBox.hidden = !0, top.hidden = !0, banner.classList.remove("on"), hint.classList.remove("on"), end.hidden = !1;
     }
     function hideScreens() {
       title.hidden = !0, cards.hidden = !0, pause.hidden = !0, end.hidden = !0;
@@ -1834,6 +1848,9 @@ button:focus-visible {
       },
       showDebug() {
         debugLine.hidden = !1;
+      },
+      clearText() {
+        banner.classList.remove("on"), hint.classList.remove("on"), bannerUntil = 0, hintUntil = 0;
       }
     };
   }
@@ -2055,7 +2072,7 @@ button:focus-visible {
       ctx.fill(), ctx.stroke(), ctx.fillStyle = "#ffffff", ctx.beginPath();
       for (let i = 0; i < humans.length; i++) {
         let h = humans[i];
-        h.flash > 0 && !h.dead && !h.gone && (ctx.moveTo(h.x + h.r * 1.2, h.y), ctx.arc(h.x, h.y, h.r * 1.2, 0, TAU));
+        h.flash > 0 && !h.dead && !h.gone && (ctx.moveTo(h.x + h.r * 0.85, h.y), ctx.arc(h.x, h.y, h.r * 0.85, 0, TAU));
       }
       ctx.fill(), ctx.fillStyle = C.danger, ctx.beginPath();
       for (let i = 0; i < humans.length; i++) {
@@ -2592,7 +2609,7 @@ button:focus-visible {
         let pilot = createBot(kind || "hunter", seed), until = state.t + seconds;
         for (; !state.over && state.t < until; )
           state.offer && chooseCard(state, pilot.pick(state)), stepSim(state, pilot.act(state)), handleEvents();
-        phase = state.over ? "ending" : "play";
+        phase = state.over ? "ending" : "play", ui.clearText();
       },
       pause: setPaused
     }, params.get("debug") && ui.showDebug(), params.get("mode") && (startNight(params.get("mode"), Number(params.get("seed")) || 1), params.get("bot") && window.GAME.setBot(params.get("bot")), params.get("speed") && (speed = Number(params.get("speed"))));

@@ -132,6 +132,7 @@ export const SETTINGS = {
     corpses: 90,
     drops: 220,
     humans: 110,
+    archers: 7, // more aim lines than this cannot be read on a phone
   },
 
   modes: {

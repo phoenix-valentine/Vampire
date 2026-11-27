@@ -16,6 +16,12 @@
   color-scheme: dark;
 }
 
+/* A host page may pad the root for the notch and home bar. Counting that padding inside the
+   height keeps the game exactly one screen tall instead of spilling past the bottom. */
+html {
+  box-sizing: border-box;
+}
+
 html,
 body {
   height: 100%;

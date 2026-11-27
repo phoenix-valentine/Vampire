@@ -140,6 +140,8 @@ export function createUi(app, handlers, version) {
     cardsTitle.textContent = "LEVEL " + level;
     cardsList.textContent = "";
     cardsOpenAt = performance.now();
+    hint.classList.remove("on");
+    hintUntil = 0;
     cardsList.classList.add("locked");
     setTimeout(() => cardsList.classList.remove("locked"), S.feel.cardLock * 1000);
     for (let i = 0; i < offer.length; i++) {
@@ -231,7 +233,7 @@ export function createUi(app, handlers, version) {
     }
     endStats.textContent = "";
     stat("Variation", S.modes[data.mode].label);
-    stat("Survived", clock(data.t) + " of " + clock(S.run.seconds));
+    stat("Survived", clock(Math.min(data.t, S.run.seconds)) + " of " + clock(S.run.seconds));
     stat("Killed", String(data.kills));
     if (data.mode === "hunt") {
       stat("Escaped", String(data.escapes));
@@ -267,6 +269,9 @@ export function createUi(app, handlers, version) {
     });
     endButtons.appendChild(copy);
     reportBox.hidden = true;
+    top.hidden = true;
+    banner.classList.remove("on");
+    hint.classList.remove("on");
     end.hidden = false;
   }
 
@@ -381,6 +386,12 @@ export function createUi(app, handlers, version) {
     },
     showDebug() {
       debugLine.hidden = false;
+    },
+    clearText() {
+      banner.classList.remove("on");
+      hint.classList.remove("on");
+      bannerUntil = 0;
+      hintUntil = 0;
     },
   };
 }
